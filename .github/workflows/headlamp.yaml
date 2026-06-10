@@ -102,7 +102,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           generate_release_notes: true
-  
+      
       - name: Publish Artifact Hub metadata branch
         run: |
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
@@ -113,26 +113,20 @@ jobs:
           TARBALL="${{ steps.package.outputs.tarball }}"
           CHECKSUM="${{ steps.package.outputs.checksum }}"
           ARCHIVE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${TARBALL}"
+          CREATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
           WORKDIR="$(mktemp -d)"
 
-          if git ls-remote --exit-code --heads origin artifacthub >/dev/null 2>&1; then
-            git clone --depth 1 --branch artifacthub \
-              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
-              "$WORKDIR"
-          else
-            git clone --depth 1 \
-              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
-              "$WORKDIR"
-            cd "$WORKDIR"
-            git checkout --orphan artifacthub
-            git rm -rf .
-            cd -
-          fi
-
-          cp artifacthub-pkg.yml "$WORKDIR/artifacthub-pkg.yml"
+          git clone --depth 1 --branch artifacthub \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            "$WORKDIR"
 
           cd "$WORKDIR"
+
+          test -f artifacthub-pkg.yml || {
+            echo "❌ artifacthub-pkg.yml not found on artifacthub branch"
+            exit 1
+          }
 
           yq -i '.version = strenv(VERSION)' artifacthub-pkg.yml
           yq -i '.createdAt = strenv(CREATED_AT)' artifacthub-pkg.yml
@@ -150,8 +144,6 @@ jobs:
           git add artifacthub-pkg.yml
           git commit -m "chore(release): publish Artifact Hub metadata for $TAG" || echo "No changes to commit"
           git push origin artifacthub
-        env:
-          CREATED_AT: ${{ steps.version.outputs.created_at }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
