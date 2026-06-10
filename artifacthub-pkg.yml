@@ -11,4 +11,4 @@ annotations:
   headlamp/plugin/distro-compat: 'in-cluster,web,docker-desktop,desktop'
 links:
   - name: source
-    url: https://github.com/capsule/headlamp-plugins/tree/main/capsule
+    url: https://github.com/projectcapsule/headlamp-plugins/tree/main/capsule
