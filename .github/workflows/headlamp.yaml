@@ -102,9 +102,12 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           generate_release_notes: true
-
+  
       - name: Publish Artifact Hub metadata branch
         run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
           TARBALL="${{ steps.package.outputs.tarball }}"
@@ -113,28 +116,33 @@ jobs:
 
           WORKDIR="$(mktemp -d)"
 
-          git clone --depth 1 --branch artifacthub \
-            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
-            "$WORKDIR" || {
-              git clone --depth 1 \
-                "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
-                "$WORKDIR"
-              cd "$WORKDIR"
-              git checkout --orphan artifacthub
-              git rm -rf .
-            }
+          if git ls-remote --exit-code --heads origin artifacthub >/dev/null 2>&1; then
+            git clone --depth 1 --branch artifacthub \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+              "$WORKDIR"
+          else
+            git clone --depth 1 \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+              "$WORKDIR"
+            cd "$WORKDIR"
+            git checkout --orphan artifacthub
+            git rm -rf .
+            cd -
+          fi
+
+          cp artifacthub-pkg.yml "$WORKDIR/artifacthub-pkg.yml"
 
           cd "$WORKDIR"
 
-          cat > artifacthub-pkg.yml <<EOF
-          version: "$VERSION"
-          name: "${{ github.event.repository.name }}"
-          displayName: "${{ github.event.repository.name }}"
-          createdAt: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          annotations:
-            headlamp/plugin/archive-url: "$ARCHIVE_URL"
-            headlamp/plugin/archive-checksum: "sha256:$CHECKSUM"
-          EOF
+          yq -i '.version = strenv(VERSION)' artifacthub-pkg.yml
+          yq -i '.createdAt = strenv(CREATED_AT)' artifacthub-pkg.yml
+          yq -i '.annotations."headlamp/plugin/archive-url" = strenv(ARCHIVE_URL)' artifacthub-pkg.yml
+          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:" + strenv(CHECKSUM)' artifacthub-pkg.yml
+
+          echo "✅ artifacthub-pkg.yml updated:"
+          echo "   version: $VERSION"
+          echo "   archive-url: $ARCHIVE_URL"
+          echo "   checksum: sha256:$CHECKSUM"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -142,6 +150,8 @@ jobs:
           git add artifacthub-pkg.yml
           git commit -m "chore(release): publish Artifact Hub metadata for $TAG" || echo "No changes to commit"
           git push origin artifacthub
+        env:
+          CREATED_AT: ${{ steps.version.outputs.created_at }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
