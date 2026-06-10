@@ -2,23 +2,23 @@ name: Headlamp Plugin CI/CD
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     tags:
       - 'v*'
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 jobs:
   test:
     name: Lint, Format, Test & Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -47,16 +47,22 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write
+      attestations: write
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -66,9 +72,9 @@ jobs:
         id: version
         run: |
           TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"          # strip leading 'v' for clean version field
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build & Package
         id: package
@@ -78,10 +84,10 @@ jobs:
           npm run build
           npm run package
           TARBALL=$(ls -1 *.tar.gz | head -n1)
-          echo "tarball=$TARBALL" >> $GITHUB_OUTPUT
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
           if [ -f "$TARBALL" ]; then
             CHECKSUM=$(sha256sum "$TARBALL" | awk '{print $1}')
-            echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+            echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
             echo "✅ Tarball: $TARBALL"
             echo "✅ Checksum: sha256:$CHECKSUM"
           else
@@ -90,17 +96,17 @@ jobs:
           fi
 
       - name: Create GitHub Release + upload asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: '*.tar.gz'
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           generate_release_notes: true
-
-      - name: Update artifacthub-pkg.yml (full automation)
+  
+      - name: Publish Artifact Hub metadata branch
         run: |
-          # Install yq (reliable one-liner)
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
@@ -108,38 +114,65 @@ jobs:
           CHECKSUM="${{ steps.package.outputs.checksum }}"
           ARCHIVE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${TARBALL}"
 
-          yq -i '.version = "'"$VERSION"'"' artifacthub-pkg.yml
-          yq -i '.createdAt = "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"' artifacthub-pkg.yml
-          yq -i '.annotations."headlamp/plugin/archive-url" = "'"$ARCHIVE_URL"'"' artifacthub-pkg.yml
-          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:'"$CHECKSUM"'"' artifacthub-pkg.yml
+          WORKDIR="$(mktemp -d)"
+
+          if git ls-remote --exit-code --heads origin artifacthub >/dev/null 2>&1; then
+            git clone --depth 1 --branch artifacthub \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+              "$WORKDIR"
+          else
+            git clone --depth 1 \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+              "$WORKDIR"
+            cd "$WORKDIR"
+            git checkout --orphan artifacthub
+            git rm -rf .
+            cd -
+          fi
+
+          cp artifacthub-pkg.yml "$WORKDIR/artifacthub-pkg.yml"
+
+          cd "$WORKDIR"
+
+          yq -i '.version = strenv(VERSION)' artifacthub-pkg.yml
+          yq -i '.createdAt = strenv(CREATED_AT)' artifacthub-pkg.yml
+          yq -i '.annotations."headlamp/plugin/archive-url" = strenv(ARCHIVE_URL)' artifacthub-pkg.yml
+          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:" + strenv(CHECKSUM)' artifacthub-pkg.yml
 
           echo "✅ artifacthub-pkg.yml updated:"
           echo "   version: $VERSION"
           echo "   archive-url: $ARCHIVE_URL"
           echo "   checksum: sha256:$CHECKSUM"
 
-      - name: Commit & push updated artifacthub-pkg.yml to main
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add artifacthub-pkg.yml
-          git add package.json
-          git add package-lock.json
-          git commit -m "chore(release): update artifacthub-pkg.yml/package.json/package-lock.json for ${{ steps.version.outputs.tag }}" || echo "No changes to commit"
-          git push origin HEAD:main   # pushes to your default branch (change to master if needed)
+          git commit -m "chore(release): publish Artifact Hub metadata for $TAG" || echo "No changes to commit"
+          git push origin artifacthub
+        env:
+          CREATED_AT: ${{ steps.version.outputs.created_at }}
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push Docker image
-        uses: docker/build-push-action@v6
+        id: docker-build
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ steps.version.outputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Generate container image attestation
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.docker-build.outputs.digest }}
+          push-to-registry: true
