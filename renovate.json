@@ -1,0 +1,40 @@
+{
+  "minimumReleaseAge": null,
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", "helpers:pinGitHubActionDigests"],
+  "baseBranches": ["main"],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "branchConcurrentLimit": 0,
+  "mode": "full",
+  "commitMessageLowerCase": "auto",
+  "semanticCommits": "enabled",
+  "semanticCommitType": "feat",
+  "ignorePaths": ["docs"],
+  "labels": ["renovate"],
+  "flux": {
+    "fileMatch": ["^.*flux\\.yaml$"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions", "flux"],
+      "groupName": "all-ci-updates",
+      "updateTypes": ["major", "minor", "patch"]
+    },
+    {
+      "matchManagers": [
+        "github-actions",
+        "flux",
+        "gomod",
+        "dockerfile",
+        "docker-compose",
+        "regex"
+      ],
+      "minimumReleaseAge": "14 days"
+    },
+    {
+      "matchManagers": ["helmv3","helm-values"],
+      "minimumReleaseAge": null
+    }
+  ]
+}
