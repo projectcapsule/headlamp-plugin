@@ -53,11 +53,6 @@ spec:
           volumeMounts:
             - name: plugins
               mountPath: /plugins
-      containers:
-        - name: headlamp
-          volumeMounts:
-            - name: plugins
-              mountPath: /plugins
       volumes:
         - name: plugins
           emptyDir: {}

@@ -19,7 +19,7 @@ COPY package.json /plugins/capsule/package.json
 FROM scratch
 
 # cp is needed at runtime to support the documented pattern:
-#   command: ['cp', '-r', '/plugins/capsule', '/plugins']
+#   command: ['/bin/cp', '-r', '/plugins/capsule', '/target/plugins']
 # mkdir is build-time only and not included here.
 COPY --from=busybox /bin/cp  /bin/cp
 COPY --from=busybox /usr/bin/cp /usr/bin/cp
