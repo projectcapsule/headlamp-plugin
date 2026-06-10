@@ -24,7 +24,27 @@ The plugin brings first-class multi-tenancy awareness to the Headlamp UI, includ
 
 ## Installation
 
-### Using a Release (recommended)
+### Plugin Manager (Recommended - In-Cluster)
+
+Enable the pluginmanager along with the release of headlamp and add the capsule-plugin as entry:
+
+```yaml
+pluginsManager:
+  enabled: true
+  configContent: |
+    plugins:
+      - name: cert-manager
+        source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_cert-manager
+        version: 0.1.1
+      - name: trivy
+        source: https://artifacthub.io/packages/headlamp/headlamp-trivy/headlamp_trivy
+        version: 0.3.2
+    installOptions:
+      parallel: true
+      maxConcurrent: 2
+```
+
+### Using a Release (Recommended - Client)
 
 1. Download the latest `capsule-plugin-*.tar.gz` from the [Releases](https://github.com/capsule/headlamp-plugin/releases) page.
 2. Open Headlamp.
