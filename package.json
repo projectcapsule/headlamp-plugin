@@ -1,6 +1,6 @@
 {
 	"name": "capsule",
-	"version": "1.0.0",
+	"version": "0.1.0-beta1",
 	"description": "Capsule multi-tenancy plugin for Headlamp. Tenant switcher, scoped namespace filtering by tenant, per-tenant namespace overview, visualization for CustomQuotas / GlobalCustomQuotas, and TenantResources / GlobalTenantResources (with SSA managed fields maps per resource).",
 	"scripts": {
 		"start": "headlamp-plugin start",

@@ -1,8 +1,8 @@
 # headlamp-plugins
 Headlamp Plugins for Project Capsule
 
-[![GitHub Release](https://img.shields.io/github/v/release/capsule/headlamp-plugin?include_prereleases&sort=semver)](https://github.com/capsule/headlamp-plugin/releases)
-[![License](https://img.shields.io/github/license/capsule/headlamp-plugin)](https://github.com/capsule/headlamp-plugin/blob/main/LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/projectcapsule/headlamp-plugin?include_prereleases&sort=semver)](https://github.com/projectcapsule/headlamp-plugin/releases)
+[![License](https://img.shields.io/github/license/projectcapsule/headlamp-plugin)](https://github.com/projectcapsule/headlamp-plugin/blob/main/LICENSE)
 
 A [Headlamp](https://headlamp.dev/) plugin for [Capsule](https://projectcapsule.dev/) — the Kubernetes multi-tenancy operator.
 
@@ -43,7 +43,7 @@ pluginsManager:
 
 ### Using a Release (Recommended - Client)
 
-1. Download the latest `capsule-plugin-*.tar.gz` from the [Releases](https://github.com/capsule/headlamp-plugin/releases) page.
+1. Download the latest `capsule-plugin-*.tar.gz` from the [Releases](https://github.com/projectcapsule/headlamp-plugin/releases) page.
 2. Open Headlamp.
 3. Go to **Settings → Plugins → Load plugin from file** and select the downloaded archive.
 4. The **Capsule** section will appear in the sidebar.
@@ -106,7 +106,7 @@ The plugin provides rich support for Capsule's replication resources:
 ### Getting Started
 
 ```bash
-git clone https://github.com/capsule/headlamp-plugin.git
+git clone https://github.com/projectcapsule/headlamp-plugin.git
 cd headlamp-plugin
 npm install
 ```
@@ -155,7 +155,7 @@ npm test
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/capsule/headlamp-plugin).
+Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/projectcapsule/headlamp-plugin).
 
 When contributing, please:
 
