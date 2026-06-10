@@ -33,12 +33,9 @@ pluginsManager:
   enabled: true
   configContent: |
     plugins:
-      - name: cert-manager
-        source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_cert-manager
-        version: 0.1.1
-      - name: trivy
-        source: https://artifacthub.io/packages/headlamp/headlamp-trivy/headlamp_trivy
-        version: 0.3.2
+      - name: capsule
+        source: https://artifacthub.io/packages/headlamp/headlamp-capsule/capsule
+        version: 0.1.0-beta1
     installOptions:
       parallel: true
       maxConcurrent: 2
