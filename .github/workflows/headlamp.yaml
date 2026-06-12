@@ -102,18 +102,18 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           generate_release_notes: true
-      
+
       - name: Publish Artifact Hub metadata branch
         run: |
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
-          TARBALL="${{ steps.package.outputs.tarball }}"
-          CHECKSUM="${{ steps.package.outputs.checksum }}"
-          ARCHIVE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${TARBALL}"
-          CREATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          export VERSION="${{ steps.version.outputs.version }}"
+          export TAG="${{ steps.version.outputs.tag }}"
+          export TARBALL="${{ steps.package.outputs.tarball }}"
+          export CHECKSUM="${{ steps.package.outputs.checksum }}"
+          export ARCHIVE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${TARBALL}"
+          export CREATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
           WORKDIR="$(mktemp -d)"
 
