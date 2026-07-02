@@ -145,6 +145,7 @@ jobs:
           PACKAGE_VERSION_DIR="$PACKAGE_DIR/$VERSION"
           mkdir -p "$PACKAGE_VERSION_DIR"
           cp "$TEMPLATE_PKG" "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
+          cp "$GITHUB_WORKSPACE/README.md" "$PACKAGE_VERSION_DIR/README.md"
 
           yq -i '.version = strenv(VERSION)' "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
           yq -i '.createdAt = strenv(CREATED_AT)' "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
