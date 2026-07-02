@@ -125,12 +125,12 @@ jobs:
 
           PACKAGE_DIR="capsule"
           TEMPLATE_PKG=""
-          if [ -f package.template.yml ]; then
-            TEMPLATE_PKG="package.template.yml"
+          if [ -f package.template ]; then
+            TEMPLATE_PKG="package.template"
           fi
 
-          if [ -z "$TEMPLATE_PKG" ] && [ -f "$PACKAGE_DIR/package.template.yml" ]; then
-            TEMPLATE_PKG="$PACKAGE_DIR/package.template.yml"
+          if [ -z "$TEMPLATE_PKG" ] && [ -f "$PACKAGE_DIR/package.template" ]; then
+            TEMPLATE_PKG="$PACKAGE_DIR/package.template"
           fi
 
           if [ -z "$TEMPLATE_PKG" ]; then
