@@ -123,9 +123,17 @@ jobs:
 
           cd "$WORKDIR"
 
-          TEMPLATE_PKG="$(find . -mindepth 2 -maxdepth 2 -name artifacthub-pkg.yml | sort -V | tail -n1)"
-          if [ -f artifacthub-pkg.yml ]; then
+          TEMPLATE_PKG=""
+          if [ -f artifacthub-pkg.template.yml ]; then
+            TEMPLATE_PKG="artifacthub-pkg.template.yml"
+          fi
+
+          if [ -z "$TEMPLATE_PKG" ] && [ -f artifacthub-pkg.yml ]; then
             TEMPLATE_PKG="artifacthub-pkg.yml"
+          fi
+
+          if [ -z "$TEMPLATE_PKG" ]; then
+            TEMPLATE_PKG="$(find . -mindepth 2 -maxdepth 2 -name artifacthub-pkg.yml | sort -V | tail -n1)"
           fi
 
           test -n "$TEMPLATE_PKG" || {
