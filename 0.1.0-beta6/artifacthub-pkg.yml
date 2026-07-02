@@ -1,0 +1,14 @@
+version: "0.1.0-beta6"
+name: capsule
+displayName: Capsule
+createdAt: '2026-07-02T11:50:41Z'
+logoURL: 'https://raw.githubusercontent.com/projectcapsule/capsule/581a8fe60e5a8a4c2861c32dd9854e1c2461777f/assets/logo/capsule.svg'
+description: 'Headlamp plugin for Capsule Kubernetes multi-tenancy. Tenant switcher, scoped namespace filtering by tenant, per-tenant namespace views, and CustomQuota/GlobalCustomQuota visualization.'
+annotations:
+  headlamp/plugin/archive-url: 'https://github.com/projectcapsule/headlamp-plugin/releases/download/v0.1.0-beta6/capsule-0.1.0-beta6.tar.gz'
+  headlamp/plugin/archive-checksum: 'sha256:4203ed8b3ff53e127b947553560a9aed7869453068c3fba2417ecd64399b3636'
+  headlamp/plugin/version-compat: '>=0.24'
+  headlamp/plugin/distro-compat: 'in-cluster,web,docker-desktop,desktop'
+links:
+  - name: source
+    url: https://github.com/projectcapsule/headlamp-plugin
