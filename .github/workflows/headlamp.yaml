@@ -49,6 +49,7 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+      artifact-metadata: write
 
     env:
       REGISTRY: ghcr.io
