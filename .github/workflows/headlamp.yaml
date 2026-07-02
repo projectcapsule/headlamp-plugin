@@ -123,25 +123,35 @@ jobs:
 
           cd "$WORKDIR"
 
-          test -f artifacthub-pkg.yml || {
-            echo "❌ artifacthub-pkg.yml not found on artifacthub branch"
+          TEMPLATE_PKG="$(find . -mindepth 2 -maxdepth 2 -name artifacthub-pkg.yml | sort -V | tail -n1)"
+          if [ -f artifacthub-pkg.yml ]; then
+            TEMPLATE_PKG="artifacthub-pkg.yml"
+          fi
+
+          test -n "$TEMPLATE_PKG" || {
+            echo "❌ No artifacthub-pkg.yml template found on artifacthub branch"
             exit 1
           }
 
-          yq -i '.version = strenv(VERSION)' artifacthub-pkg.yml
-          yq -i '.createdAt = strenv(CREATED_AT)' artifacthub-pkg.yml
-          yq -i '.annotations."headlamp/plugin/archive-url" = strenv(ARCHIVE_URL)' artifacthub-pkg.yml
-          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:" + strenv(CHECKSUM)' artifacthub-pkg.yml
+          mkdir -p "$VERSION"
+          cp "$TEMPLATE_PKG" "$VERSION/artifacthub-pkg.yml"
 
-          echo "✅ artifacthub-pkg.yml updated:"
+          yq -i '.version = strenv(VERSION)' "$VERSION/artifacthub-pkg.yml"
+          yq -i '.createdAt = strenv(CREATED_AT)' "$VERSION/artifacthub-pkg.yml"
+          yq -i '.annotations."headlamp/plugin/archive-url" = strenv(ARCHIVE_URL)' "$VERSION/artifacthub-pkg.yml"
+          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:" + strenv(CHECKSUM)' "$VERSION/artifacthub-pkg.yml"
+          rm -f artifacthub-pkg.yml
+
+          echo "✅ Artifact Hub metadata published:"
           echo "   version: $VERSION"
+          echo "   path: $VERSION/artifacthub-pkg.yml"
           echo "   archive-url: $ARCHIVE_URL"
           echo "   checksum: sha256:$CHECKSUM"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add artifacthub-pkg.yml
+          git add -A
           git commit -m "chore(release): publish Artifact Hub metadata for $TAG" || echo "No changes to commit"
           git push origin artifacthub
 
