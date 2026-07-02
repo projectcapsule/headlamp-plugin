@@ -97,7 +97,7 @@ jobs:
           name: Release ${{ steps.version.outputs.tag }}
           generate_release_notes: true
 
-      - name: Update artifacthub-pkg.yml (full automation)
+      - name: Generate Artifact Hub package metadata
         run: |
           # Install yq (reliable one-liner)
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq
@@ -108,25 +108,34 @@ jobs:
           CHECKSUM="${{ steps.package.outputs.checksum }}"
           ARCHIVE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${TARBALL}"
 
-          yq -i '.version = "'"$VERSION"'"' artifacthub-pkg.yml
-          yq -i '.createdAt = "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"' artifacthub-pkg.yml
-          yq -i '.annotations."headlamp/plugin/archive-url" = "'"$ARCHIVE_URL"'"' artifacthub-pkg.yml
-          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:'"$CHECKSUM"'"' artifacthub-pkg.yml
+          cp artifacthub-pkg.yml .artifacthub-pkg.yml
+          yq -i '.version = "'"$VERSION"'"' .artifacthub-pkg.yml
+          yq -i '.createdAt = "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"' .artifacthub-pkg.yml
+          yq -i '.annotations."headlamp/plugin/archive-url" = "'"$ARCHIVE_URL"'"' .artifacthub-pkg.yml
+          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:'"$CHECKSUM"'"' .artifacthub-pkg.yml
 
-          echo "✅ artifacthub-pkg.yml updated:"
+          echo "✅ Artifact Hub metadata generated:"
           echo "   version: $VERSION"
           echo "   archive-url: $ARCHIVE_URL"
           echo "   checksum: sha256:$CHECKSUM"
 
-      - name: Commit & push updated artifacthub-pkg.yml to main
+      - name: Publish Artifact Hub metadata
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add artifacthub-pkg.yml
-          git add package.json
-          git add package-lock.json
-          git commit -m "chore(release): update artifacthub-pkg.yml/package.json/package-lock.json for ${{ steps.version.outputs.tag }}" || echo "No changes to commit"
-          git push origin HEAD:main   # pushes to your default branch (change to master if needed)
+
+          VERSION="${{ steps.version.outputs.version }}"
+          git fetch origin artifacthub
+          git worktree add artifacthub-worktree origin/artifacthub
+
+          mkdir -p "artifacthub-worktree/${VERSION}"
+          cp .artifacthub-pkg.yml "artifacthub-worktree/${VERSION}/artifacthub-pkg.yml"
+          cp artifacthub-repo.yml artifacthub-worktree/artifacthub-repo.yml
+
+          git -C artifacthub-worktree rm -f artifacthub-pkg.yml || true
+          git -C artifacthub-worktree add artifacthub-repo.yml "${VERSION}/artifacthub-pkg.yml"
+          git -C artifacthub-worktree commit -m "chore(artifacthub): publish ${{ steps.version.outputs.tag }}" || echo "No Artifact Hub metadata changes to commit"
+          git -C artifacthub-worktree push origin HEAD:artifacthub
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
