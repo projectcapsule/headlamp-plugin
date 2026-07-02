@@ -125,20 +125,12 @@ jobs:
 
           PACKAGE_DIR="capsule"
           TEMPLATE_PKG=""
-          if [ -f artifacthub-pkg.template.yml ]; then
-            TEMPLATE_PKG="artifacthub-pkg.template.yml"
+          if [ -f package.template.yml ]; then
+            TEMPLATE_PKG="package.template.yml"
           fi
 
-          if [ -z "$TEMPLATE_PKG" ] && [ -f "$PACKAGE_DIR/artifacthub-pkg.template.yml" ]; then
-            TEMPLATE_PKG="$PACKAGE_DIR/artifacthub-pkg.template.yml"
-          fi
-
-          if [ -z "$TEMPLATE_PKG" ] && [ -f artifacthub-pkg.yml ]; then
-            TEMPLATE_PKG="artifacthub-pkg.yml"
-          fi
-
-          if [ -z "$TEMPLATE_PKG" ] && [ -f "$PACKAGE_DIR/artifacthub-pkg.yml" ]; then
-            TEMPLATE_PKG="$PACKAGE_DIR/artifacthub-pkg.yml"
+          if [ -z "$TEMPLATE_PKG" ] && [ -f "$PACKAGE_DIR/package.template.yml" ]; then
+            TEMPLATE_PKG="$PACKAGE_DIR/package.template.yml"
           fi
 
           if [ -z "$TEMPLATE_PKG" ]; then
