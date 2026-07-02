@@ -24,7 +24,24 @@ The plugin brings first-class multi-tenancy awareness to the Headlamp UI, includ
 
 ## Installation
 
-### Using a Release (recommended)
+### Plugin Manager (Recommended - In-Cluster)
+
+Enable the pluginmanager along with the release of headlamp and add the capsule-plugin as entry:
+
+```yaml
+pluginsManager:
+  enabled: true
+  configContent: |
+    plugins:
+      - name: capsule
+        source: https://artifacthub.io/packages/headlamp/headlamp-capsule/capsule
+        version: 0.1.0-beta1
+    installOptions:
+      parallel: true
+      maxConcurrent: 2
+```
+
+### Using a Release (Recommended - Client)
 
 1. Download the latest `capsule-plugin-*.tar.gz` from the [Releases](https://github.com/projectcapsule/headlamp-plugin/releases) page.
 2. Open Headlamp.
