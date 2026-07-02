@@ -123,17 +123,18 @@ jobs:
 
           cd "$WORKDIR"
 
+          PACKAGE_DIR="capsule"
           TEMPLATE_PKG=""
-          if [ -f artifacthub-pkg.template.yml ]; then
-            TEMPLATE_PKG="artifacthub-pkg.template.yml"
+          if [ -f package.template ]; then
+            TEMPLATE_PKG="package.template"
           fi
 
-          if [ -z "$TEMPLATE_PKG" ] && [ -f artifacthub-pkg.yml ]; then
-            TEMPLATE_PKG="artifacthub-pkg.yml"
+          if [ -z "$TEMPLATE_PKG" ] && [ -f "$PACKAGE_DIR/package.template" ]; then
+            TEMPLATE_PKG="$PACKAGE_DIR/package.template"
           fi
 
           if [ -z "$TEMPLATE_PKG" ]; then
-            TEMPLATE_PKG="$(find . -mindepth 2 -maxdepth 2 -name artifacthub-pkg.yml | sort -V | tail -n1)"
+            TEMPLATE_PKG="$(find "$PACKAGE_DIR" -mindepth 2 -maxdepth 2 -name artifacthub-pkg.yml | sort -V | tail -n1)"
           fi
 
           test -n "$TEMPLATE_PKG" || {
@@ -141,18 +142,21 @@ jobs:
             exit 1
           }
 
-          mkdir -p "$VERSION"
-          cp "$TEMPLATE_PKG" "$VERSION/artifacthub-pkg.yml"
+          PACKAGE_VERSION_DIR="$PACKAGE_DIR/$VERSION"
+          mkdir -p "$PACKAGE_VERSION_DIR"
+          cp "$TEMPLATE_PKG" "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
+          cp "$GITHUB_WORKSPACE/README.md" "$PACKAGE_VERSION_DIR/README.md"
 
-          yq -i '.version = strenv(VERSION)' "$VERSION/artifacthub-pkg.yml"
-          yq -i '.createdAt = strenv(CREATED_AT)' "$VERSION/artifacthub-pkg.yml"
-          yq -i '.annotations."headlamp/plugin/archive-url" = strenv(ARCHIVE_URL)' "$VERSION/artifacthub-pkg.yml"
-          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:" + strenv(CHECKSUM)' "$VERSION/artifacthub-pkg.yml"
+          yq -i '.version = strenv(VERSION)' "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
+          yq -i '.createdAt = strenv(CREATED_AT)' "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
+          yq -i '.annotations."headlamp/plugin/archive-url" = strenv(ARCHIVE_URL)' "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
+          yq -i '.annotations."headlamp/plugin/archive-checksum" = "sha256:" + strenv(CHECKSUM)' "$PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
           rm -f artifacthub-pkg.yml
+          rm -f "$PACKAGE_DIR/artifacthub-pkg.yml"
 
           echo "✅ Artifact Hub metadata published:"
           echo "   version: $VERSION"
-          echo "   path: $VERSION/artifacthub-pkg.yml"
+          echo "   path: $PACKAGE_VERSION_DIR/artifacthub-pkg.yml"
           echo "   archive-url: $ARCHIVE_URL"
           echo "   checksum: sha256:$CHECKSUM"
 
@@ -170,6 +174,9 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
       - name: Build & push Docker image
         id: docker-build
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
@@ -180,7 +187,17 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Generate container image attestation
+      - name: Sign container image
+        env:
+          DIGEST: ${{ steps.docker-build.outputs.digest }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          cosign sign --yes \
+            "${IMAGE}:${TAG}@${DIGEST}" \
+            "${IMAGE}:latest@${DIGEST}"
+
+      - name: Generate and push container image attestation
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
