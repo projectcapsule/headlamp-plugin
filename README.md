@@ -43,10 +43,58 @@ pluginsManager:
 
 ### Using a Release (Recommended - Client)
 
-1. Download the latest `capsule-plugin-*.tar.gz` from the [Releases](https://github.com/projectcapsule/headlamp-plugin/releases) page.
+1. Download the latest `capsule-*.tar.gz` from the [Releases](https://github.com/projectcapsule/headlamp-plugin/releases) page.
 2. Open Headlamp.
 3. Go to **Settings → Plugins → Load plugin from file** and select the downloaded archive.
 4. The **Capsule** section will appear in the sidebar.
+
+### In-cluster
+
+#### Via init container (using our Docker image)
+
+Example patch for the Headlamp Deployment (our image includes `cp`):
+
+```yaml
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: install-capsule-plugin
+          image: ghcr.io/projectcapsule/headlamp-plugin:vX.Y.Z
+          command: ['/bin/cp', '-r', '/plugins/capsule', '/target/plugins']
+          volumeMounts:
+            - name: plugins
+              mountPath: /target/plugins
+      containers:
+        - name: headlamp
+          volumeMounts:
+            - name: plugins
+              mountPath: /plugins
+      volumes:
+        - name: plugins
+          emptyDir: {}
+```
+
+#### Using an image volume (Kubernetes 1.31+)
+
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: headlamp
+          volumeMounts:
+            - name: plugins
+              mountPath: /plugins
+      volumes:
+        - name: plugins
+          image:
+            reference: ghcr.io/projectcapsule/headlamp-plugin:vX.Y.Z
+            pullPolicy: IfNotPresent
+```
+
+The image filesystem (containing `/plugins/capsule`) is mounted read-only at `/plugins`. This is the recommended approach when using a custom-built plugin image.
 
 ### Development / Hot Reload
 
