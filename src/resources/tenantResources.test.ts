@@ -3,7 +3,10 @@ import {
   getAppliedCount,
   getAppliedObjectsForTable,
   getDefinedReplicationEntries,
+  getManagedObjectStatusMessage,
   getPlural,
+  getReplicationDependencies,
+  getResourceCondition,
   getSpecResourcesCount,
   hasReadyConditionTrue,
   isResourceReady,
@@ -141,6 +144,47 @@ describe('tenantResources helpers', () => {
     });
   });
 
+  describe('getManagedObjectStatusMessage', () => {
+    const descriptor = {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      name: 'settings',
+      namespace: 'green',
+      _processedItem: {
+        status: { status: 'False', message: 'generator failed to apply' },
+      },
+    };
+
+    it('prefers the live not-ready condition message', () => {
+      expect(
+        getManagedObjectStatusMessage(
+          {
+            apiVersion: 'v1',
+            kind: 'ConfigMap',
+            metadata: { name: 'settings', namespace: 'green' },
+            status: {
+              conditions: [{ type: 'Ready', status: 'False', message: 'live object is not ready' }],
+            },
+          },
+          [descriptor]
+        )
+      ).toBe('live object is not ready');
+    });
+
+    it('falls back to the Capsule processed-item message', () => {
+      expect(
+        getManagedObjectStatusMessage(
+          {
+            apiVersion: 'v1',
+            kind: 'ConfigMap',
+            metadata: { name: 'settings', namespace: 'green' },
+          },
+          [descriptor]
+        )
+      ).toBe('generator failed to apply');
+    });
+  });
+
   describe('isResourceReady', () => {
     it('returns false for falsy', () => {
       expect(isResourceReady(null)).toBe(false);
@@ -176,6 +220,94 @@ describe('tenantResources helpers', () => {
 
       expect(isResourceReady({ status: { conditions: [] } })).toBe(false);
       expect(isResourceReady({ status: {} })).toBe(false);
+    });
+  });
+
+  describe('getResourceCondition', () => {
+    it('finds conditions on plain and KubeObject-wrapped resources', () => {
+      const ready = { type: 'Ready', status: 'False', message: 'apply failed' };
+      const cordoned = { type: 'Cordoned', status: 'True' };
+
+      expect(getResourceCondition({ status: { conditions: [ready] } }, 'Ready')).toBe(ready);
+      expect(
+        getResourceCondition({ jsonData: { status: { conditions: [cordoned] } } }, 'Cordoned')
+      ).toBe(cordoned);
+      expect(getResourceCondition({}, 'Ready')).toBeUndefined();
+    });
+  });
+
+  describe('getReplicationDependencies', () => {
+    it('resolves TenantResource dependencies only within the same namespace', () => {
+      const item = {
+        kind: 'TenantResource',
+        metadata: { name: 'consumer', namespace: 'solar-test' },
+        spec: { dependsOn: [{ name: 'base' }, { name: 'missing' }] },
+      };
+      const dependencies = getReplicationDependencies(item, [
+        {
+          kind: 'TenantResource',
+          metadata: { name: 'base', namespace: 'other' },
+          status: { conditions: [{ type: 'Ready', status: 'True' }] },
+        },
+        {
+          kind: 'TenantResource',
+          metadata: { name: 'base', namespace: 'solar-test' },
+          status: {
+            conditions: [
+              { type: 'Ready', status: 'False', message: 'source is still reconciling' },
+            ],
+          },
+        },
+      ]);
+
+      expect(
+        dependencies.map(({ name, namespace, state, message }) => ({
+          name,
+          namespace,
+          state,
+          message,
+        }))
+      ).toEqual([
+        {
+          name: 'base',
+          namespace: 'solar-test',
+          state: 'Not Ready',
+          message: 'source is still reconciling',
+        },
+        {
+          name: 'missing',
+          namespace: 'solar-test',
+          state: 'Missing',
+          message: 'Dependency not found',
+        },
+      ]);
+    });
+
+    it('reports GlobalTenantResource dependencies in declared order', () => {
+      const dependencies = getReplicationDependencies(
+        {
+          kind: 'GlobalTenantResource',
+          metadata: { name: 'consumer' },
+          spec: { dependsOn: [{ name: 'ready' }, { name: 'pending' }] },
+        },
+        [
+          {
+            kind: 'GlobalTenantResource',
+            metadata: { name: 'pending' },
+            status: { conditions: [] },
+          },
+          {
+            kind: 'GlobalTenantResource',
+            metadata: { name: 'ready' },
+            status: {
+              conditions: [{ type: 'Ready', status: 'True', reason: 'Reconciled' }],
+            },
+          },
+        ]
+      );
+
+      expect(dependencies.map(dependency => dependency.name)).toEqual(['ready', 'pending']);
+      expect(dependencies.map(dependency => dependency.state)).toEqual(['Ready', 'Unknown']);
     });
   });
 

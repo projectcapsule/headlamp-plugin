@@ -1,62 +1,109 @@
 import { Icon } from '@iconify/react';
-import { Avatar, Box, Divider, Paper, Popper, Typography } from '@mui/material';
+import { Avatar, Box, Button, Divider, Tab, Tabs } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { Tenants } from '../../resources/tenants';
-import { getTenantIcon, getTenantLinks, safeUrl } from '../../utils/tenantMeta';
+import { isImageRef, safeUrl } from '../../utils/tenantMeta';
+import {
+  getSelectedTenantContexts,
+  readSelectedTenantNames,
+  type TenantContextData,
+} from './tenantContext';
 
-function getSelectedTenantNames(): string[] {
-  const saved =
-    localStorage.getItem('selectedTenantNames') ||
-    localStorage.getItem('selectedTenantName') ||
-    localStorage.getItem('selectedTenant');
-  let names: string[] = [];
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        names = parsed.filter((n: any) => typeof n === 'string');
-      } else if (typeof parsed === 'string') {
-        names = [parsed];
-      } else if (parsed?.metadata && typeof parsed.metadata.name === 'string') {
-        names = [parsed.metadata.name];
-      }
-    } catch (_e) {
-      if (saved && !saved.startsWith('{') && !saved.startsWith('[')) {
-        names = [saved.replace(/^"|"$/g, '')];
-      }
-    }
+const ICONIFY_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$/i;
+
+function AnnotationIcon({ value, size }: { value?: string; size: number }) {
+  if (!value) return null;
+  if (isImageRef(value)) {
+    return (
+      <Avatar alt="" src={safeUrl(value)} variant="rounded" sx={{ height: size, width: size }} />
+    );
   }
-  return names;
+  if (ICONIFY_NAME.test(value)) {
+    return <Icon aria-hidden icon={value} style={{ fontSize: size }} />;
+  }
+  return null;
 }
 
+function TenantLinks({ tenant }: { tenant: TenantContextData }) {
+  const links = tenant.links.flatMap((link, index) => {
+    const href = safeUrl(link.url);
+    return href ? [{ ...link, href, key: `${link.title || href}-${index}` }] : [];
+  });
+
+  if (links.length === 0) return null;
+
+  return (
+    <Box
+      aria-label={`${tenant.name} links`}
+      sx={{
+        alignItems: 'center',
+        borderColor: 'divider',
+        borderTop: { xs: '1px solid', md: 0 },
+        display: 'flex',
+        flex: { xs: '0 0 auto', md: '1 1 auto' },
+        minHeight: 42,
+        minWidth: 0,
+        overflowX: 'auto',
+        px: { xs: 1, md: 1.5 },
+        scrollbarWidth: 'thin',
+        width: { xs: '100%', md: 'auto' },
+      }}
+    >
+      <Box
+        sx={{
+          alignItems: 'center',
+          display: 'flex',
+          gap: 0.5,
+          marginLeft: 'auto',
+          minWidth: 'max-content',
+        }}
+      >
+        {links.map(link => (
+          <Button
+            aria-label={`${link.title || link.href} (opens in a new tab)`}
+            component="a"
+            href={link.href}
+            key={link.key}
+            rel="noopener noreferrer"
+            size="small"
+            startIcon={
+              link.icon ? (
+                <AnnotationIcon size={18} value={link.icon} />
+              ) : (
+                <Icon aria-hidden icon="mdi:open-in-new" />
+              )
+            }
+            sx={{
+              flexShrink: 0,
+              minHeight: 30,
+              textTransform: 'none',
+              whiteSpace: 'nowrap',
+            }}
+            target="_blank"
+            variant="text"
+          >
+            {link.title || link.href}
+          </Button>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * A secondary context row below Headlamp's app bar. The empty selection means
+ * "All Tenants" and intentionally renders nothing. Specific selections become
+ * tabs, with the active Tenant's annotation-driven links alongside them.
+ */
 export function TenantLinksBar() {
   const [tenants] = Tenants.useList();
-  const [selectedNames, setSelectedNames] = useState<string[]>(getSelectedTenantNames());
-
-  // For the popup menu similar to TenantBox chooser
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [currentTenantName, setCurrentTenantName] = useState<string | null>(null);
-
-  // Hover delay handling for stable UX
-  const [closeTimer, setCloseTimer] = useState<number | null>(null);
-
-  const clearCloseTimer = () => {
-    if (closeTimer) {
-      clearTimeout(closeTimer);
-      setCloseTimer(null);
-    }
-  };
-
-  const scheduleClose = () => {
-    clearCloseTimer();
-    const timer = window.setTimeout(() => {
-      handleClose();
-    }, 250); // slightly longer delay to make crossing from navbar to popup more reliable
-    setCloseTimer(timer);
-  };
+  const [selectedNames, setSelectedNames] = useState<string[]>(() =>
+    readSelectedTenantNames(window.localStorage)
+  );
+  const [activeTenantName, setActiveTenantName] = useState<string>('');
 
   useEffect(() => {
-    const update = () => setSelectedNames(getSelectedTenantNames());
+    const update = () => setSelectedNames(readSelectedTenantNames(window.localStorage));
     window.addEventListener('storage', update);
     window.addEventListener('tenantSelectionChanged', update as EventListener);
     return () => {
@@ -65,210 +112,74 @@ export function TenantLinksBar() {
     };
   }, []);
 
-  const handleOpen = (event: React.MouseEvent<HTMLElement>, tenantName: string) => {
-    clearCloseTimer();
-    setAnchorEl(event.currentTarget);
-    setCurrentTenantName(tenantName);
-  };
+  const selectedTenants = useMemo(
+    () => getSelectedTenantContexts(tenants, selectedNames),
+    [tenants, selectedNames]
+  );
+  const activeTenant =
+    selectedTenants.find(tenant => tenant.name === activeTenantName) || selectedTenants[0];
 
-  const handleClose = () => {
-    clearCloseTimer();
-    setAnchorEl(null);
-    setCurrentTenantName(null);
-  };
+  if (!activeTenant) return null;
 
-  const selectedTenantData = useMemo(() => {
-    if (!tenants || selectedNames.length === 0) return [];
-
-    const selectedSet = new Set(selectedNames);
-    return tenants
-      .filter((t: any) => {
-        const n = t.getName ? t.getName() : t.metadata?.name;
-        return selectedSet.has(n);
-      })
-      .map((t: any) => {
-        const name = t.getName ? t.getName() : t.metadata?.name;
-        const icon = getTenantIcon(t);
-        const tenantLinks = getTenantLinks(t);
-        return { name, icon, links: tenantLinks };
-      });
-  }, [tenants, selectedNames]);
-
-  if (selectedTenantData.length === 0) {
-    return null;
-  }
-
-  // Find current tenant for the popup
-  const currentTenantData = selectedTenantData.find(t => t.name === currentTenantName);
+  const activeTenantHasLinks = activeTenant.links.some(link => !!safeUrl(link.url));
 
   return (
-    <>
-      {/* Stable navbar - tenant names only, no size change on interaction */}
-      <Box
+    <Box
+      aria-label="Selected Tenant contexts"
+      component="nav"
+      sx={{
+        // Headlamp renders top-side panels immediately before its AppBar in a
+        // column flex layout. Give the adjacent AppBar an earlier flex order so
+        // this contextual row sits directly beneath it instead of above it.
+        '& + .MuiAppBar-root': { order: -1 },
+        bgcolor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        boxShadow: theme => `0 1px 2px ${theme.palette.action.disabledBackground}`,
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        flexShrink: 0,
+        minHeight: 42,
+        width: '100%',
+      }}
+    >
+      <Tabs
+        aria-label="Selected Tenants"
+        onChange={(_event, value: string) => setActiveTenantName(value)}
+        scrollButtons="auto"
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          px: 1.5,
-          py: 0.25,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.default',
-          overflowX: 'auto',
-          whiteSpace: 'nowrap',
-          minHeight: 32,
+          flexShrink: 0,
+          minHeight: 42,
+          maxWidth: { xs: '100%', md: '52%' },
+          '& .MuiTabs-indicator': { height: 3 },
         }}
+        value={activeTenant.name}
+        variant="scrollable"
       >
-        {selectedTenantData.map(tenantData => {
-          const { name, icon } = tenantData;
-          return (
-            <Box
-              key={name}
-              onMouseEnter={e => handleOpen(e, name)}
-              onMouseLeave={scheduleClose}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                px: 0.75,
-                py: 0.25,
-                borderRadius: 0.5,
-                cursor: 'default',
-                fontSize: '0.7rem',
-                '&:hover': {
-                  bgcolor: 'action.hover',
-                },
-              }}
-            >
-              {icon && (
-                <Avatar src={safeUrl(icon)} sx={{ width: 16, height: 16, fontSize: '0.55rem' }} />
-              )}
-              <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
-                {name}
-              </Typography>
-            </Box>
-          );
-        })}
-      </Box>
-
-      {/* Popup box similar to the tenant chooser - opens under the navbar.
-          Using Popper + Paper directly (instead of Popover/Menu) to completely avoid
-          focus management and aria-hidden issues that cause open/close loops on hover.
-          Navbar popup. */}
-      <Popper
-        open={Boolean(anchorEl) && !!currentTenantData}
-        anchorEl={anchorEl}
-        placement="bottom-start"
-        container={typeof document !== 'undefined' ? document.body : undefined}
-        style={{ zIndex: 99999 }} // extremely high z-index to guarantee it appears in front of Headlamp's top app bar / navigation
-        modifiers={[
-          {
-            name: 'offset',
-            options: {
-              offset: [0, 4],
-            },
-          },
-        ]}
-      >
-        <Paper
-          elevation={4}
-          onMouseEnter={clearCloseTimer}
-          onMouseLeave={scheduleClose}
-          sx={{
-            minWidth: 220,
-            maxWidth: 320,
-            py: 0.5,
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-            zIndex: 99999,
-          }}
-        >
-          {currentTenantData && (
-            <>
-              {/* Header similar to chooser style */}
-              <Box
-                sx={{
-                  px: 1.5,
-                  py: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                }}
-              >
-                {currentTenantData.icon && (
-                  <Avatar src={safeUrl(currentTenantData.icon)} sx={{ width: 20, height: 20 }} />
-                )}
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {currentTenantData.name}
-                </Typography>
-              </Box>
-              <Divider sx={{ my: 0.5 }} />
-
-              {currentTenantData.links.length > 0 ? (
-                currentTenantData.links.map((link: any, i: number) => {
-                  const href = safeUrl(link.url);
-                  const iconSrc = safeUrl(link.icon);
-                  return (
-                    <Box
-                      key={i}
-                      component="a"
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={handleClose}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        px: 1.5,
-                        py: 0.75,
-                        fontSize: '0.875rem',
-                        color: 'text.primary',
-                        textDecoration: 'none',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        },
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {iconSrc ? (
-                        <img
-                          src={iconSrc}
-                          style={{
-                            width: 16,
-                            height: 16,
-                            objectFit: 'contain',
-                          }}
-                          alt=""
-                        />
-                      ) : link.icon ? (
-                        Icon && typeof Icon === 'function' ? (
-                          <Icon icon={link.icon} style={{ fontSize: 16 }} />
-                        ) : null
-                      ) : null}
-                      <Typography variant="body2" noWrap>
-                        {link.title || link.url}
-                      </Typography>
-                    </Box>
-                  );
-                })
-              ) : (
-                <Box
-                  sx={{
-                    px: 1.5,
-                    py: 1,
-                    color: 'text.secondary',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  No links configured
-                </Box>
-              )}
-            </>
-          )}
-        </Paper>
-      </Popper>
-    </>
+        {selectedTenants.map(tenant => (
+          <Tab
+            icon={tenant.icon ? <AnnotationIcon size={20} value={tenant.icon} /> : undefined}
+            iconPosition="start"
+            key={tenant.name}
+            label={tenant.name}
+            sx={{
+              gap: 0.75,
+              minHeight: 42,
+              minWidth: 0,
+              px: 1.5,
+              py: 0.5,
+              textTransform: 'none',
+            }}
+            value={tenant.name}
+          />
+        ))}
+      </Tabs>
+      {activeTenantHasLinks && (
+        <>
+          <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', md: 'block' } }} />
+          <TenantLinks tenant={activeTenant} />
+        </>
+      )}
+    </Box>
   );
 }

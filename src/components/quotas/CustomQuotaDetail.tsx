@@ -5,7 +5,11 @@ import { useParams } from 'react-router-dom';
 import { Cell, Pie, PieChart } from 'recharts';
 import { CustomQuota } from '../../resources/customQuotas';
 import { parseKubernetesQuantity, usageHex } from '../../utils/quantity';
+import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
+import { DetailsSectionStack } from '../common/DetailsSectionStack';
+import { QuotaAggregationView } from '../common/QuotaAggregationView';
 import { QuotaClaims } from '../common/QuotaClaims';
+import { customQuotaAggregation } from './customQuotaAggregationHelpers';
 
 export interface CustomQuotaDetailProps {
   name?: string;
@@ -27,7 +31,6 @@ export function CustomQuotaDetail(props: CustomQuotaDetailProps) {
         name={name}
         namespace={namespace}
         resourceType={CustomQuota}
-        withEvents
         extraInfo={item => {
           if (!item) return [];
           const limit = item.spec?.limit || '—';
@@ -88,10 +91,14 @@ export function CustomQuotaDetail(props: CustomQuotaDetailProps) {
             },
           ];
         }}
-      />
-
-      <CustomQuotaSources name={name} namespace={namespace} />
-      <QuotaClaims quota={quota} />
+      >
+        <DetailsSectionStack>
+          <ConditionsAndEvents resource={quota} />
+          <QuotaAggregationView data={customQuotaAggregation(quota, 'CustomQuota')} />
+          <CustomQuotaSources name={name} namespace={namespace} />
+          <QuotaClaims quota={quota} />
+        </DetailsSectionStack>
+      </Resource.DetailsGrid>
     </>
   );
 }

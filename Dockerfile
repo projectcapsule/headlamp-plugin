@@ -1,11 +1,4 @@
-FROM scratch
-
-COPY --from=stagex/core-busybox /bin/mkdir /bin/mkdir
-COPY --from=stagex/core-busybox /usr/bin/mkdir /usr/bin/mkdir
-
-COPY --from=stagex/core-busybox /bin/cp /bin/cp
-COPY --from=stagex/core-busybox /usr/bin/cp /usr/bin/cp
-
+FROM busybox:1.37.0
 
 RUN ["/bin/mkdir", "-p", "/plugins/capsule"]
 

@@ -1,13 +1,13 @@
 import { Icon } from '@iconify/react';
 import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { Link, ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import type {
   ColumnType,
   ResourceTableColumn,
 } from '@kinvolk/headlamp-plugin/lib/components/common';
-import { Avatar, Box, Chip, Grid, Tooltip, Typography } from '@mui/material';
+import { Avatar, Box, Chip, Tooltip, Typography } from '@mui/material';
 import { useMemo } from 'react';
-import React from 'react';
+import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { Tenants } from '../../resources/tenants';
 import {
   getTenantDescription,
@@ -17,8 +17,10 @@ import {
   safeUrl,
 } from '../../utils/tenantMeta';
 import { findSpaceInfo, getTenantSpaceNames, isSpaceReady } from '../../utils/tenantSpaces';
+import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { TenantCordonAction } from '../common/ReconcileActions';
 import { StatCard } from '../common/StatCard';
+import { SummaryCardGrid } from '../common/SummaryCardGrid';
 
 export const tenantColumns: (ResourceTableColumn<Tenants> | ColumnType)[] = [
   {
@@ -31,12 +33,12 @@ export const tenantColumns: (ResourceTableColumn<Tenants> | ColumnType)[] = [
       return (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Tooltip title={desc || ''}>
-            <Link routeName="tenant" params={{ name: item.getName() }}>
+            <CapsuleResourceLink crd={CAPSULE_CRDS.Tenant} name={item.getName()}>
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 {item.getName()}
                 {icon && <Avatar src={safeUrl(icon)} sx={{ width: 24, height: 24 }} />}
               </Box>
-            </Link>
+            </CapsuleResourceLink>
           </Tooltip>
         </Box>
       );
@@ -146,22 +148,6 @@ export const tenantColumns: (ResourceTableColumn<Tenants> | ColumnType)[] = [
       );
     },
   },
-  {
-    id: 'owners',
-    label: 'Owners',
-    getValue: (item: Tenants) => (item.spec?.owners || []).map(o => o.name).join(', '),
-    render: (item: Tenants) => {
-      const owners = item.spec?.owners || [];
-      if (owners.length === 0) return '—';
-      const chips: React.ReactNode[] = owners
-        .slice(0, 3)
-        .map((o, i: number) => (
-          <Chip key={i} size="small" label={`${o.name} (${o.kind})`} sx={{ mr: 0.5, mb: 0.25 }} />
-        ));
-      if (owners.length > 3) chips.push(<span key="more">+{owners.length - 3}</span>);
-      return <>{chips}</>;
-    },
-  },
   'age',
 ];
 
@@ -223,44 +209,32 @@ export function TenantsList() {
 
   return (
     <>
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6} md={4}>
-          <StatCard
-            label="TENANTS"
-            total={stateStats.total}
-            segments={[
-              { name: 'Active', value: stateStats.active, color: '#4caf50' },
-              {
-                name: 'Cordoned',
-                value: stateStats.cordoned,
-                color: '#ff9800',
-              },
-            ]}
-            chips={[
-              { label: `${stateStats.active} Active`, color: 'success' },
-              { label: `${stateStats.cordoned} Cordoned`, color: 'warning' },
-            ]}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <StatCard
-            label="MANAGED NAMESPACES"
-            total={nsStats.total}
-            segments={[
-              { name: 'Ready', value: nsStats.ready, color: '#4caf50' },
-              {
-                name: 'Not Ready',
-                value: nsStats.notReady,
-                color: '#f44336',
-              },
-            ]}
-            chips={[
-              { label: `${nsStats.ready} Ready`, color: 'success' },
-              { label: `${nsStats.notReady} Not Ready` },
-            ]}
-          />
-        </Grid>
-      </Grid>
+      <SummaryCardGrid columns={2} marginBottom={2} inset>
+        <StatCard
+          label="TENANTS"
+          total={stateStats.total}
+          segments={[
+            { name: 'Active', value: stateStats.active, color: '#4caf50' },
+            { name: 'Cordoned', value: stateStats.cordoned, color: '#ff9800' },
+          ]}
+          chips={[
+            { label: `${stateStats.active} Active`, color: 'success' },
+            { label: `${stateStats.cordoned} Cordoned`, color: 'warning' },
+          ]}
+        />
+        <StatCard
+          label="MANAGED NAMESPACES"
+          total={nsStats.total}
+          segments={[
+            { name: 'Ready', value: nsStats.ready, color: '#4caf50' },
+            { name: 'Not Ready', value: nsStats.notReady, color: '#f44336' },
+          ]}
+          chips={[
+            { label: `${nsStats.ready} Ready`, color: 'success' },
+            { label: `${nsStats.notReady} Not Ready`, color: 'error' },
+          ]}
+        />
+      </SummaryCardGrid>
 
       <ResourceListView
         title="Tenants"

@@ -2,6 +2,10 @@
 	"name": "capsule",
 	"version": "0.1.0-beta1",
 	"description": "Capsule multi-tenancy plugin for Headlamp. Tenant switcher, scoped namespace filtering by tenant, per-tenant namespace overview, visualization for CustomQuotas / GlobalCustomQuotas, and TenantResources / GlobalTenantResources (with SSA managed fields maps per resource).",
+	"engines": {
+		"node": ">=22 <25",
+		"npm": ">=11"
+	},
 	"scripts": {
 		"start": "headlamp-plugin start",
 		"build": "headlamp-plugin build",
@@ -34,6 +38,7 @@
 		"@kinvolk/headlamp-plugin": "^0.14.0"
 	},
 	"dependencies": {
+		"@xyflow/react": "^12.11.0",
 		"diff": "^9.0.0",
 		"recharts": "^3.8.1"
 	}

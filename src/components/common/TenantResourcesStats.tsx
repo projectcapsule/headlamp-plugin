@@ -1,4 +1,3 @@
-import { Grid } from '@mui/material';
 import { useMemo } from 'react';
 import {
   getAppliedObjectsForTable,
@@ -7,6 +6,7 @@ import {
 } from '../../resources/tenantResources';
 import { useFetchedResources } from './ManagedResources';
 import { StatCard } from './StatCard';
+import { SummaryCardGrid } from './SummaryCardGrid';
 
 export interface TenantResourcesStatsProps {
   items: any[];
@@ -79,59 +79,45 @@ export function TenantResourcesStats({ items, scope = 'tenant' }: TenantResource
   const hasRepl = repl.total > 0 || allApplied.length > 0;
 
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
-      {/* Card 1: Tenant/Global CRs count + Ready pie */}
-      <Grid item xs={12} sm={6} md={5} lg={4}>
-        <StatCard
-          label={crTitle}
-          total={own.total}
-          segments={
-            hasOwn
-              ? [
-                  { name: 'Ready', value: own.ready, color: '#4caf50' },
-                  { name: 'Not Ready', value: own.notReady, color: '#f44336' },
-                ]
-              : []
-          }
-          chips={[
-            { label: `${own.ready} Ready`, color: 'success' },
-            { label: `${own.notReady} Not Ready` },
-          ]}
-        />
-      </Grid>
+    <SummaryCardGrid columns={2} marginBottom={2} inset>
+      <StatCard
+        label={crTitle}
+        total={own.total}
+        segments={
+          hasOwn
+            ? [
+                { name: 'Ready', value: own.ready, color: '#4caf50' },
+                { name: 'Not Ready', value: own.notReady, color: '#f44336' },
+              ]
+            : []
+        }
+        chips={[
+          { label: `${own.ready} Ready`, color: 'success' },
+          { label: `${own.notReady} Not Ready`, color: 'error' },
+        ]}
+      />
 
-      {/* Card 2: Replicated objects count + Ready pie (live objects) */}
-      <Grid item xs={12} sm={6} md={5} lg={4}>
-        <StatCard
-          label="REPLICATED RESOURCES"
-          total={repl.total || allApplied.length}
-          segments={
-            hasRepl
-              ? [
-                  {
-                    name: 'Ready',
-                    value: repl.ready + repl.unknown,
-                    color: '#4caf50',
-                  },
-                  { name: 'Not Ready', value: repl.notReady, color: '#f44336' },
-                ]
-              : []
-          }
-          chips={[
-            { label: `${repl.ready} Ready`, color: 'success' },
-            { label: `${repl.notReady} Not Ready` },
-            ...(repl.unknown > 0
-              ? [
-                  {
-                    label: `${repl.unknown} Unknown`,
-                    color: 'success' as const,
-                  },
-                ]
-              : []),
-          ]}
-        />
-      </Grid>
-    </Grid>
+      <StatCard
+        label="REPLICATED RESOURCES"
+        total={repl.total || allApplied.length}
+        segments={
+          hasRepl
+            ? [
+                { name: 'Ready', value: repl.ready, color: '#4caf50' },
+                { name: 'Not Ready', value: repl.notReady, color: '#f44336' },
+                { name: 'Unknown', value: repl.unknown, color: '#9e9e9e' },
+              ]
+            : []
+        }
+        chips={[
+          { label: `${repl.ready} Ready`, color: 'success' },
+          { label: `${repl.notReady} Not Ready`, color: 'error' },
+          ...(repl.unknown > 0
+            ? [{ label: `${repl.unknown} Unknown`, color: 'default' as const }]
+            : []),
+        ]}
+      />
+    </SummaryCardGrid>
   );
 }
 
