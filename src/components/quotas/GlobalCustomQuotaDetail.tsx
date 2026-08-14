@@ -1,11 +1,15 @@
-import { Link, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource, { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import { Cell, Pie, PieChart } from 'recharts';
 import { GlobalCustomQuota } from '../../resources/customQuotas';
 import { parseKubernetesQuantity, usageHex } from '../../utils/quantity';
+import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
+import { DetailsSectionStack } from '../common/DetailsSectionStack';
+import { QuotaAggregationView } from '../common/QuotaAggregationView';
 import { QuotaClaims } from '../common/QuotaClaims';
+import { customQuotaAggregation } from './customQuotaAggregationHelpers';
 
 export interface GlobalCustomQuotaDetailProps {
   name?: string;
@@ -24,7 +28,6 @@ export function GlobalCustomQuotaDetail(props: GlobalCustomQuotaDetailProps) {
       <Resource.DetailsGrid
         name={name}
         resourceType={GlobalCustomQuota}
-        withEvents
         extraInfo={item => {
           if (!item) return [];
           const limit = item.spec?.limit || '—';
@@ -93,12 +96,18 @@ export function GlobalCustomQuotaDetail(props: GlobalCustomQuotaDetailProps) {
             },
           ];
         }}
-      />
-
-      <GlobalCustomQuotaSources name={name} />
-      <QuotaClaims quota={quota} cluster={cluster} />
-      <GlobalCustomQuotaConditions name={name} />
-      <GlobalCustomQuotaNamespaces name={name} />
+      >
+        <DetailsSectionStack>
+          <ConditionsAndEvents resource={quota} />
+          <QuotaAggregationView
+            cluster={cluster}
+            data={customQuotaAggregation(quota, 'GlobalCustomQuota')}
+            namespaceEmptyMessage="No namespaces or per-claim consumption have been reported for this quota yet."
+          />
+          <GlobalCustomQuotaSources name={name} />
+          <QuotaClaims quota={quota} cluster={cluster} />
+        </DetailsSectionStack>
+      </Resource.DetailsGrid>
     </>
   );
 }
@@ -138,81 +147,6 @@ function GlobalCustomQuotaSources({ name }: { name: string }) {
           ]}
           data={sources}
           emptyMessage="No sources defined."
-          reflectInURL={false}
-        />
-      )}
-    </SectionBox>
-  );
-}
-
-function GlobalCustomQuotaNamespaces({ name }: { name: string }) {
-  const [quotas] = GlobalCustomQuota.useList();
-  const quota = quotas?.find((q: any) => q.getName() === name);
-  const namespaces = quota?.status?.namespaces || [];
-  const cluster = quota?.cluster;
-
-  return (
-    <SectionBox title="Namespaces in scope">
-      {namespaces.length === 0 ? (
-        <Typography color="text.secondary">
-          No namespaces selected yet (or no namespaceSelectors).
-        </Typography>
-      ) : (
-        <SimpleTable
-          columns={[
-            {
-              label: 'Namespace',
-              getter: (row: { ns: string }) => {
-                const ns = row.ns;
-                return (
-                  <Link routeName="namespace" params={{ name: ns }} activeCluster={cluster} tooltip>
-                    {ns}
-                  </Link>
-                );
-              },
-            },
-          ]}
-          data={namespaces.map((ns: string) => ({ ns }))}
-          emptyMessage="No namespaces selected."
-          reflectInURL={false}
-        />
-      )}
-    </SectionBox>
-  );
-}
-
-function GlobalCustomQuotaConditions({ name }: { name: string }) {
-  const [quotas] = GlobalCustomQuota.useList();
-  const quota = quotas?.find((q: any) => q.getName() === name);
-  const conds = quota?.status?.conditions || [];
-  return (
-    <SectionBox title="Conditions">
-      {conds.length === 0 ? (
-        <Typography color="text.secondary">No conditions.</Typography>
-      ) : (
-        <SimpleTable
-          columns={[
-            { label: 'Type', getter: (c: any) => c.type },
-            {
-              label: 'Status',
-              getter: (c: any) => (
-                <Chip
-                  label={c.status}
-                  color={c.status === 'True' ? 'success' : 'default'}
-                  size="small"
-                />
-              ),
-            },
-            { label: 'Reason', getter: (c: any) => c.reason || '—' },
-            { label: 'Message', getter: (c: any) => c.message || '—' },
-            {
-              label: 'Last Transition',
-              getter: (c: any) =>
-                c.lastTransitionTime ? new Date(c.lastTransitionTime).toLocaleString() : '—',
-            },
-          ]}
-          data={conds}
-          emptyMessage="No conditions."
           reflectInURL={false}
         />
       )}

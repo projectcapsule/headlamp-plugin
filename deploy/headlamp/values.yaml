@@ -1,0 +1,120 @@
+# Development-only values for the Capsule Headlamp plugin.
+#
+# The init container image is built from this repository. The development
+# script overrides its image and pull policy for the target cluster.
+
+fullnameOverride: capsule-headlamp
+
+config:
+  inCluster: true
+  pluginsDir: /headlamp/plugins
+  watchPlugins: true
+
+serviceAccount:
+  create: true
+  name: capsule-headlamp
+
+# Keep the chart's baseline read binding stable across upgrades.
+clusterRoleBinding:
+  create: true
+  clusterRoleName: view
+
+# Development-only: additionally let Headlamp administer every API at cluster
+# scope so every UI action can be exercised against the local cluster. Never
+# copy this binding into a shared or production installation.
+extraManifests:
+  - |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: capsule-headlamp-cluster-admin
+      labels:
+        app.kubernetes.io/part-of: capsule-headlamp-development
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+      - kind: ServiceAccount
+        name: capsule-headlamp
+        namespace: {{ .Release.Namespace }}
+
+podLabels:
+  app.kubernetes.io/part-of: capsule-headlamp-development
+
+podSecurityContext:
+  fsGroup: 101
+
+volumeMounts:
+  - name: plugins
+    mountPath: /headlamp/plugins
+
+volumes:
+  - name: plugins
+    emptyDir: {}
+
+initContainers:
+  - name: capsule-plugin
+    image: capsule-headlamp-plugin:dev
+    imagePullPolicy: Never
+    command:
+      - /bin/cp
+    args:
+      - -r
+      - /plugins/capsule
+      - /headlamp/plugins/
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      runAsGroup: 101
+      runAsNonRoot: true
+      runAsUser: 100
+    volumeMounts:
+      - name: plugins
+        mountPath: /headlamp/plugins
+
+# kubectl cp needs tar at both ends. This development-only sidecar makes it
+# possible to replace the built bundle without rebuilding the pod.
+extraContainers:
+  - name: plugin-sync
+    image: busybox:1.37.0
+    imagePullPolicy: IfNotPresent
+    command:
+      - /bin/sh
+      - -c
+      - while true; do sleep 3600; done
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      runAsGroup: 101
+      runAsNonRoot: true
+      runAsUser: 100
+    resources:
+      requests:
+        cpu: 1m
+        memory: 4Mi
+      limits:
+        cpu: 20m
+        memory: 16Mi
+    volumeMounts:
+      - name: plugins
+        mountPath: /headlamp/plugins
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

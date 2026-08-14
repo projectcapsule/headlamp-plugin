@@ -41,6 +41,104 @@ export function isResourceReady(item: any): boolean {
   );
 }
 
+/** Returns a condition from either a KubeObject wrapper or a plain API object. */
+export function getResourceCondition(item: any, type: string): any | undefined {
+  const data = item?.jsonData || item || {};
+  const conditions = data.status?.conditions || item?.status?.conditions || [];
+  return conditions.find((condition: any) => condition?.type === type);
+}
+
+export type ReplicationDependencyState = 'Missing' | 'Not Ready' | 'Ready' | 'Unknown';
+
+export interface ReplicationDependency {
+  color: 'error' | 'success' | 'warning';
+  kind: 'GlobalTenantResource' | 'TenantResource';
+  message: string;
+  name: string;
+  namespace?: string;
+  resource?: any;
+  state: ReplicationDependencyState;
+}
+
+function replicationKind(item: any): string {
+  return item?.kind || item?.jsonData?.kind || item?.constructor?.kind || '';
+}
+
+function replicationMetadata(item: any): any {
+  return item?.metadata || item?.jsonData?.metadata || {};
+}
+
+/** Resolves spec.dependsOn in declaration order and reports each dependency's live Ready state. */
+export function getReplicationDependencies(
+  item: any,
+  candidates: any[] = []
+): ReplicationDependency[] {
+  const json = item?.jsonData || item || {};
+  const kind = replicationKind(item);
+  if (kind !== 'TenantResource' && kind !== 'GlobalTenantResource') return [];
+
+  const namespace = replicationMetadata(item).namespace;
+  const dependsOn = Array.isArray(json.spec?.dependsOn) ? json.spec.dependsOn : [];
+  return dependsOn
+    .filter((reference: any) => typeof reference?.name === 'string' && reference.name.length > 0)
+    .map((reference: any) => {
+      const resource = candidates.find((candidate: any) => {
+        const metadata = replicationMetadata(candidate);
+        return (
+          replicationKind(candidate) === kind &&
+          metadata.name === reference.name &&
+          (kind === 'GlobalTenantResource' || metadata.namespace === namespace)
+        );
+      });
+
+      if (!resource) {
+        return {
+          color: 'error' as const,
+          kind,
+          message: 'Dependency not found',
+          name: reference.name,
+          namespace: kind === 'TenantResource' ? namespace : undefined,
+          state: 'Missing' as const,
+        };
+      }
+
+      const condition = getResourceCondition(resource, 'Ready');
+      const status = String(condition?.status ?? '').toLowerCase();
+      if (status === 'true') {
+        return {
+          color: 'success' as const,
+          kind,
+          message: condition?.message || condition?.reason || 'Dependency is ready',
+          name: reference.name,
+          namespace: kind === 'TenantResource' ? namespace : undefined,
+          resource,
+          state: 'Ready' as const,
+        };
+      }
+      if (status === 'false') {
+        return {
+          color: 'error' as const,
+          kind,
+          message: condition?.message || condition?.reason || 'Dependency is not ready',
+          name: reference.name,
+          namespace: kind === 'TenantResource' ? namespace : undefined,
+          resource,
+          state: 'Not Ready' as const,
+        };
+      }
+
+      return {
+        color: 'warning' as const,
+        kind,
+        message: condition?.message || condition?.reason || 'Ready state has not been reported',
+        name: reference.name,
+        namespace: kind === 'TenantResource' ? namespace : undefined,
+        resource,
+        state: 'Unknown' as const,
+      };
+    });
+}
+
 export function hasReadyConditionTrue(obj: any): boolean {
   if (!obj) return false;
   const status = obj?.jsonData?.status || obj?.status;
@@ -48,6 +146,57 @@ export function hasReadyConditionTrue(obj: any): boolean {
   const conditions: any[] = status.conditions || [];
   return conditions.some(
     (c: any) => c && c.type === 'Ready' && (c.status === 'True' || c.status === true)
+  );
+}
+
+function findAppliedDescriptor(liveObj: any, appliedDescriptors: any[]): any | undefined {
+  const liveData = liveObj?.jsonData || liveObj || {};
+  const liveMetadata = liveObj?.metadata || liveData.metadata || {};
+  const liveApiVersion = liveObj?.apiVersion || liveData.apiVersion || '';
+  const liveKind = liveObj?.kind || liveData.kind || '';
+
+  return (appliedDescriptors || []).find((descriptor: any) => {
+    const descriptorData = descriptor?.jsonData || descriptor || {};
+    const descriptorMetadata = descriptor?.metadata || descriptorData.metadata || descriptorData;
+    const descriptorApiVersion = descriptor?.apiVersion || descriptorData.apiVersion || '';
+    const descriptorKind = descriptor?.kind || descriptorData.kind || '';
+    const sameIdentity =
+      (descriptorMetadata.name || descriptor?.name || '') === (liveMetadata.name || '') &&
+      (descriptorMetadata.namespace || descriptor?.namespace || '') ===
+        (liveMetadata.namespace || '') &&
+      descriptorKind === liveKind;
+
+    return (
+      sameIdentity &&
+      (!descriptorApiVersion || !liveApiVersion || descriptorApiVersion === liveApiVersion)
+    );
+  });
+}
+
+/** Returns the most useful reconciliation message for a managed object. */
+export function getManagedObjectStatusMessage(
+  liveObj: any,
+  appliedDescriptors: any[]
+): string | undefined {
+  const liveStatus = liveObj?.jsonData?.status || liveObj?.status || {};
+  const readyCondition = (liveStatus.conditions || []).find(
+    (condition: any) => condition?.type === 'Ready'
+  );
+  const descriptor = findAppliedDescriptor(liveObj, appliedDescriptors);
+  const processedStatus = descriptor?._processedItem?.status;
+  const processedMessage =
+    processedStatus && typeof processedStatus === 'object' ? processedStatus.message : undefined;
+
+  if (readyCondition && readyCondition.status !== 'True' && readyCondition.status !== true) {
+    return readyCondition.message || processedMessage || readyCondition.reason || undefined;
+  }
+
+  return (
+    processedMessage ||
+    readyCondition?.message ||
+    descriptor?.message ||
+    descriptor?.status?.message ||
+    undefined
   );
 }
 
@@ -159,16 +308,7 @@ export function getManagedObjectReadyStatus(
     }
   }
 
-  const desc = (appliedDescriptors || []).find((a: any) => {
-    const aApi = a?.apiVersion || a?.jsonData?.apiVersion || '';
-    const oApi = (liveObj as any)?.apiVersion || liveObj?.jsonData?.apiVersion || '';
-    return (
-      (a?.name || '') === (liveObj?.metadata?.name || '') &&
-      (a?.namespace || '') === (liveObj?.metadata?.namespace || '') &&
-      (a?.kind || '') === (liveObj?.kind || '') &&
-      aApi === oApi
-    );
-  });
+  const desc = findAppliedDescriptor(liveObj, appliedDescriptors);
 
   const p = desc?._processedItem;
   const pStatus = p?.status?.status || p?.status;

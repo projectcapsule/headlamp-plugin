@@ -2,17 +2,22 @@ import { K8s } from '@kinvolk/headlamp-plugin/lib';
 import { Link, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource, { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Typography } from '@mui/material';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import {
   getAppliedCount,
   getDefinedReplicationEntries,
   getPlural,
+  getReplicationDependencies,
   getSpecResourcesCount,
   TenantResource,
 } from '../../resources/tenantResources';
+import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
+import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { ManagedResources } from '../common/ManagedResources';
+import { REPLICATION_RESOURCE_REFRESH_EVENT } from '../common/replicationCordon';
+import { ReplicationDependenciesSection } from '../common/ReplicationDependencies';
 
 export interface TenantResourceDetailProps {
   name?: string;
@@ -24,12 +29,40 @@ export function TenantResourceDetail(props: TenantResourceDetailProps) {
   const { name = params.name, namespace = params.namespace } = props;
 
   const [list, listError] = TenantResource.useList();
-  const tenantResourceItem = useMemo(
+  const listedTenantResourceItem = useMemo(
     () =>
       list?.find(
         (q: any) => q.getName() === name && (!namespace || q.getNamespace() === namespace)
       ),
     [list, name, namespace]
+  );
+  const [actionRefreshedItem, setActionRefreshedItem] = useState<any>();
+
+  useEffect(() => {
+    const handleRefresh = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (
+        detail?.kind === 'TenantResource' &&
+        detail.name === name &&
+        (!namespace || detail.namespace === namespace)
+      ) {
+        setActionRefreshedItem(new TenantResource(detail.data));
+      }
+    };
+    window.addEventListener(REPLICATION_RESOURCE_REFRESH_EVENT, handleRefresh);
+    return () => window.removeEventListener(REPLICATION_RESOURCE_REFRESH_EVENT, handleRefresh);
+  }, [name, namespace]);
+
+  const tenantResourceItem = useMemo(() => {
+    if (!actionRefreshedItem) return listedTenantResourceItem;
+    if (!listedTenantResourceItem) return actionRefreshedItem;
+    const listedVersion = BigInt(listedTenantResourceItem.metadata?.resourceVersion || 0);
+    const refreshedVersion = BigInt(actionRefreshedItem.metadata?.resourceVersion || 0);
+    return listedVersion > refreshedVersion ? listedTenantResourceItem : actionRefreshedItem;
+  }, [actionRefreshedItem, listedTenantResourceItem]);
+  const dependencies = useMemo(
+    () => getReplicationDependencies(tenantResourceItem, list || []),
+    [tenantResourceItem, list]
   );
 
   return (
@@ -45,7 +78,6 @@ export function TenantResourceDetail(props: TenantResourceDetailProps) {
         name={name}
         namespace={namespace}
         resourceType={TenantResource}
-        withEvents
         extraInfo={item => {
           if (!item) return [];
           const numSpecResources = getSpecResourcesCount(item);
@@ -69,62 +101,23 @@ export function TenantResourceDetail(props: TenantResourceDetailProps) {
             },
           ];
         }}
-      />
-
-      <TenantResourceConditions name={name} namespace={namespace} item={tenantResourceItem} />
-      <TenantResourceDefinedResources name={name} namespace={namespace} item={tenantResourceItem} />
-      <ManagedResources item={tenantResourceItem} title="Managed Resources" />
+      >
+        <DetailsSectionStack>
+          <ConditionsAndEvents resource={tenantResourceItem} />
+          <ReplicationDependenciesSection dependencies={dependencies} />
+          <TenantResourceDefinedResources
+            name={name}
+            namespace={namespace}
+            item={tenantResourceItem}
+          />
+          <ManagedResources
+            item={tenantResourceItem}
+            title="Managed Resources"
+            dependencies={dependencies}
+          />
+        </DetailsSectionStack>
+      </Resource.DetailsGrid>
     </>
-  );
-}
-
-function TenantResourceConditions({
-  name,
-  namespace,
-  item: providedItem,
-}: {
-  name: string;
-  namespace?: string;
-  item?: any;
-}) {
-  const [list] = TenantResource.useList();
-  const item =
-    providedItem ||
-    list?.find((q: any) => q.getName() === name && (!namespace || q.getNamespace() === namespace));
-  const conditions = item?.status?.conditions || item?.jsonData?.status?.conditions || [];
-
-  return (
-    <SectionBox title="Conditions">
-      {conditions.length === 0 ? (
-        <Typography color="text.secondary">No conditions.</Typography>
-      ) : (
-        <SimpleTable
-          columns={[
-            { label: 'Type', getter: (c: any) => c.type },
-            {
-              label: 'Status',
-              getter: (c: any) => (
-                <Chip
-                  label={c.status}
-                  color={c.status === 'True' ? 'success' : 'default'}
-                  size="small"
-                />
-              ),
-            },
-            { label: 'Reason', getter: (c: any) => c.reason || '—' },
-            { label: 'Message', getter: (c: any) => c.message || '—' },
-            {
-              label: 'Last Transition',
-              getter: (c: any) =>
-                c.lastTransitionTime ? new Date(c.lastTransitionTime).toLocaleString() : '—',
-            },
-          ]}
-          data={conditions}
-          emptyMessage="No conditions."
-          reflectInURL={false}
-        />
-      )}
-    </SectionBox>
   );
 }
 function TenantResourceDefinedResources({
@@ -178,8 +171,8 @@ function TenantResourceDefinedResources({
 
   return (
     <SectionBox title="Defined Resources">
-      {Object.entries(grouped).map(([kind, kindResources]) => (
-        <Box key={kind} sx={{ mb: 3 }}>
+      {Object.entries(grouped).map(([kind, kindResources], index, entries) => (
+        <Box key={kind} sx={{ mb: index === entries.length - 1 ? 0 : 3 }}>
           <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
             {kind} ({kindResources.length})
           </Typography>

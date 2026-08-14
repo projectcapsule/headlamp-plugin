@@ -80,6 +80,8 @@ export interface ProcessedItem {
 
 export interface TenantResourceObject extends KubeObjectInterface {
   spec?: {
+    cordoned?: boolean;
+    dependsOn?: Array<{ name: string }>;
     tenantSelector?: {
       matchLabels?: Record<string, string>;
       matchExpressions?: Array<{
@@ -107,6 +109,8 @@ export interface TenantResourceObject extends KubeObjectInterface {
 
 export interface GlobalTenantResourceObject extends KubeObjectInterface {
   spec?: {
+    cordoned?: boolean;
+    dependsOn?: Array<{ name: string }>;
     tenantSelector?: {
       matchLabels?: Record<string, string>;
       matchExpressions?: Array<{
@@ -137,8 +141,13 @@ export {
   getAppliedObjectsForTable,
   getDefinedReplicationEntries,
   getManagedObjectReadyStatus,
+  getManagedObjectStatusMessage,
   getPlural,
+  getReplicationDependencies,
+  getResourceCondition,
   getSpecResourcesCount,
   hasReadyConditionTrue,
   isResourceReady,
+  type ReplicationDependency,
+  type ReplicationDependencyState,
 } from './tenantResources.helpers';

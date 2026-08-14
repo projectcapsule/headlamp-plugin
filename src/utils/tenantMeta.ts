@@ -5,7 +5,7 @@ import type { Tenants } from '../resources/tenants';
  * rendering the user-controlled values they contain (links, icons, banners).
  *
  * These were previously duplicated across TenantBox, TenantList, TenantDetail
- * and TenantLinksBar with subtly different fallback chains.
+ * and the Tenant context panel with subtly different fallback chains.
  */
 
 export interface TenantLink {

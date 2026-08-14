@@ -1,10 +1,13 @@
-import { Link, ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { Chip, Grid, Typography } from '@mui/material';
+import { ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Chip, Typography } from '@mui/material';
 import { useMemo } from 'react';
+import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { GlobalCustomQuota } from '../../resources/customQuotas';
 import { usagePercent } from '../../utils/quantity';
+import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { QuotaUsage } from '../common/QuotaUsage';
 import { StatCard } from '../common/StatCard';
+import { SummaryCardGrid } from '../common/SummaryCardGrid';
 
 export function GlobalCustomQuotasList() {
   const [items] = GlobalCustomQuota.useList();
@@ -20,38 +23,57 @@ export function GlobalCustomQuotasList() {
       else healthy++;
     });
     const total = items?.length || 0;
-    return { healthy, warning, critical, total };
+    const namespaces = (items || []).reduce((totalNamespaces, item) => {
+      const referenced = new Set([
+        ...(item.status?.namespaces || []),
+        ...(item.status?.claims || []).map(claim => claim.namespace).filter(Boolean),
+      ]);
+      return totalNamespaces + referenced.size;
+    }, 0);
+    return { healthy, warning, critical, total, namespaces };
   }, [items]);
 
   return (
     <>
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6} md={4}>
-          <StatCard
-            label="GLOBAL CUSTOM QUOTAS"
-            total={health.total}
-            segments={[
-              { name: 'Healthy', value: health.healthy, color: '#4caf50' },
-              { name: 'Warning', value: health.warning, color: '#ff9800' },
-              { name: 'Critical', value: health.critical, color: '#f44336' },
-            ]}
-            chips={[
-              { label: `${health.healthy} Healthy`, color: 'success' },
-              { label: `${health.warning} Warning`, color: 'warning' },
-              { label: `${health.critical} Critical`, color: 'error' },
-            ]}
-            footer={
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', mt: 0.5 }}
-              >
-                Based on usage % (healthy &lt;70%)
-              </Typography>
-            }
-          />
-        </Grid>
-      </Grid>
+      <SummaryCardGrid columns={2} marginBottom={2} inset>
+        <StatCard
+          label="GLOBAL CUSTOM QUOTAS"
+          total={health.total}
+          segments={[
+            { name: 'Healthy', value: health.healthy, color: '#4caf50' },
+            { name: 'Warning', value: health.warning, color: '#ff9800' },
+            { name: 'Critical', value: health.critical, color: '#f44336' },
+          ]}
+          chips={[
+            { label: `${health.healthy} Healthy`, color: 'success' },
+            { label: `${health.warning} Warning`, color: 'warning' },
+            { label: `${health.critical} Critical`, color: 'error' },
+          ]}
+          footer={
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+              Based on usage % (healthy &lt;70%)
+            </Typography>
+          }
+        />
+        <StatCard
+          label="NAMESPACES IN SCOPE"
+          total={health.namespaces}
+          segments={[{ name: 'Namespaces', value: health.namespaces, color: '#1976d2' }]}
+          chips={[
+            {
+              label: `${health.namespaces} namespace reference${
+                health.namespaces === 1 ? '' : 's'
+              }`,
+              color: 'info',
+            },
+          ]}
+          footer={
+            <Typography variant="caption" color="text.secondary">
+              Across all GlobalCustomQuotas
+            </Typography>
+          }
+        />
+      </SummaryCardGrid>
 
       <ResourceListView
         title="Global Custom Quotas"
@@ -62,9 +84,9 @@ export function GlobalCustomQuotasList() {
             label: 'Name',
             getValue: item => item.getName(),
             render: item => (
-              <Link routeName="globalcustomquota" params={{ name: item.getName() }}>
+              <CapsuleResourceLink crd={CAPSULE_CRDS.GlobalCustomQuota} name={item.getName()}>
                 {item.getName()}
-              </Link>
+              </CapsuleResourceLink>
             ),
           },
           {
@@ -84,6 +106,15 @@ export function GlobalCustomQuotasList() {
             id: 'available',
             label: 'Available',
             getValue: item => item.status?.usage?.available || '',
+          },
+          {
+            id: 'namespaces',
+            label: 'Namespaces',
+            getValue: item =>
+              new Set([
+                ...(item.status?.namespaces || []),
+                ...(item.status?.claims || []).map(claim => claim.namespace).filter(Boolean),
+              ]).size,
           },
           {
             id: 'sources',

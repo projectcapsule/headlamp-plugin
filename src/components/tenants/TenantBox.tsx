@@ -123,7 +123,7 @@ export function TenantBox() {
   // Persist selection (array)
   useEffect(() => {
     localStorage.setItem('selectedTenantNames', JSON.stringify(selectedTenantNames));
-    // Notify other components (like global links nav bar) about the change
+    // Notify other components (including the secondary Tenant context tabs) about the change.
     window.dispatchEvent(
       new CustomEvent('tenantSelectionChanged', {
         detail: selectedTenantNames,

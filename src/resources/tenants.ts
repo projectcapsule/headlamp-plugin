@@ -45,6 +45,7 @@ export class Tenants extends KubeObject<TenantsObject> {
 
 export interface TenantsObject extends KubeObjectInterface {
   spec?: {
+    cordoned?: boolean;
     owners?: Array<{
       apiGroup: string;
       kind: string;
@@ -55,6 +56,12 @@ export interface TenantsObject extends KubeObjectInterface {
     storageClasses?: string[] | { allowed?: string[]; allowedRegex?: string };
     ingressClasses?: { allowed?: string[] };
     nodeSelector?: Record<string, string>;
+    namespaceOptions?: {
+      quota?: number;
+    };
+    permissions?: {
+      allowOwnerPromotion?: boolean;
+    };
     forbiddenAnnotations?: string[];
     forbiddenLabels?: string[];
     // Note: additionalPodSpecs and other advanced options exist in Capsule but are not fully modeled here
@@ -73,5 +80,11 @@ export interface TenantsObject extends KubeObjectInterface {
     namespaces?: string[] | number;
     size?: number;
     spaces?: Record<string, any> | any[];
+    promotions?: Array<{
+      clusterRoles?: string[];
+      kind: 'User' | 'Group' | 'ServiceAccount';
+      name: string;
+      targets?: string[];
+    }>;
   };
 }

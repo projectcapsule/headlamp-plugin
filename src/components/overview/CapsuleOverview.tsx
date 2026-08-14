@@ -1,121 +1,141 @@
-import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { Link, ResourceListView, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { Grid, Typography } from '@mui/material';
+import { Typography } from '@mui/material';
 import { useMemo } from 'react';
+import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { CustomQuota, GlobalCustomQuota } from '../../resources/customQuotas';
+import { GlobalResourceQuota } from '../../resources/globalResourceQuotas';
+import { ResourcePool } from '../../resources/resourcePools';
+import { TenantOwner } from '../../resources/tenantOwners';
 import {
   getAppliedObjectsForTable,
   getManagedObjectReadyStatus,
   GlobalTenantResource,
-  isResourceReady,
   TenantResource,
 } from '../../resources/tenantResources';
 import { Tenants } from '../../resources/tenants';
 import { getTenantSpaces, isSpaceReady } from '../../utils/tenantSpaces';
 import { useFetchedResources } from '../common/ManagedResources';
 import { StatCard } from '../common/StatCard';
-import { tenantColumns } from '../tenants/TenantList';
+import { SummaryCardGrid } from '../common/SummaryCardGrid';
+import { CapsuleEvents } from './CapsuleEvents';
+import { countQuotaHealth, countReadiness, countResourcePools } from './overviewStats';
+
+const footer = (text: string) => (
+  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.25 }}>
+    {text}
+  </Typography>
+);
 
 export function CapsuleOverview() {
-  const [tenants, tenantsError] = Tenants.useList();
-  const [gQuotas] = GlobalCustomQuota.useList();
-  const [cQuotas] = CustomQuota.useList();
-  const [gTRs] = GlobalTenantResource.useList();
-  const [tTRs] = TenantResource.useList();
+  const [tenants] = Tenants.useList();
+  const [customQuotas] = CustomQuota.useList();
+  const [globalCustomQuotas] = GlobalCustomQuota.useList();
+  const [globalResourceQuotas] = GlobalResourceQuota.useList();
+  const [tenantResources] = TenantResource.useList();
+  const [globalTenantResources] = GlobalTenantResource.useList();
+  const [resourcePools] = ResourcePool.useList();
+  const [tenantOwners] = TenantOwner.useList();
 
   const allManagedApplied = useMemo(() => {
-    const fromGlobal = (gTRs || []).flatMap((r: any) => getAppliedObjectsForTable(r));
-    const fromTenant = (tTRs || []).flatMap((r: any) => getAppliedObjectsForTable(r));
+    const fromGlobal = (globalTenantResources || []).flatMap(resource =>
+      getAppliedObjectsForTable(resource)
+    );
+    const fromTenant = (tenantResources || []).flatMap(resource =>
+      getAppliedObjectsForTable(resource)
+    );
     return [...fromGlobal, ...fromTenant];
-  }, [gTRs, tTRs]);
+  }, [globalTenantResources, tenantResources]);
 
   const managedObjects = useFetchedResources(allManagedApplied);
 
-  const [allNS, nsError] = K8s.ResourceClasses.Namespace.useList();
-
   const stats = useMemo(() => {
-    const numTenants = tenants?.length || 0;
-    let active = 0;
-    let cordoned = 0;
-    tenants?.forEach((t: any) => {
-      const state = t.status?.state || t.jsonData?.status?.state || '';
-      const isCordoned = !!t.jsonData?.spec?.cordoned || state.toLowerCase() === 'cordoned';
-      if (isCordoned) {
-        cordoned++;
-      } else {
-        active++;
-      }
-    });
+    let activeTenants = 0;
+    let cordonedTenants = 0;
+    let readyNamespaces = 0;
+    let notReadyNamespaces = 0;
 
-    const managedNS =
-      allNS?.filter((ns: any) => {
-        const labels = ns.jsonData?.metadata?.labels || {};
-        return !!labels['capsule.clastix.io/tenant'];
-      }).length || 0;
+    (tenants || []).forEach(tenant => {
+      const state = tenant.status?.state || tenant.jsonData?.status?.state || '';
+      const isCordoned = !!tenant.jsonData?.spec?.cordoned || state.toLowerCase() === 'cordoned';
+      if (isCordoned) cordonedTenants++;
+      else activeTenants++;
 
-    const numCQuotas = cQuotas?.length || 0;
-    const numTR = tTRs?.length || 0;
-
-    let nsReady = 0;
-    let nsNotReady = 0;
-    tenants?.forEach(t => {
-      getTenantSpaces(t).forEach(sp => {
-        if (isSpaceReady(sp)) nsReady++;
-        else nsNotReady++;
+      getTenantSpaces(tenant).forEach(space => {
+        if (isSpaceReady(space)) readyNamespaces++;
+        else notReadyNamespaces++;
       });
     });
 
-    const gQuotasList = gQuotas || [];
-    const gqReady = gQuotasList.filter((q: any) => isResourceReady(q)).length;
-    const gqNotReady = gQuotasList.length - gqReady;
+    const customQuotaHealth = countQuotaHealth(customQuotas);
+    const globalCustomQuotaHealth = countQuotaHealth(globalCustomQuotas);
+    const globalResourceQuotaReadiness = countReadiness(globalResourceQuotas);
+    const globalResourceQuotaNamespaces = (globalResourceQuotas || []).reduce(
+      (total, quota) => total + (Number(quota.status?.namespaceCount) || 0),
+      0
+    );
+    const tenantResourceReadiness = countReadiness(tenantResources);
+    const globalTenantResourceReadiness = countReadiness(globalTenantResources);
+    const tenantOwnerReadiness = countReadiness(tenantOwners);
+    const resourcePoolState = countResourcePools(resourcePools);
 
-    const gtrReadyCount = (gTRs || []).filter((r: any) => isResourceReady(r)).length;
-    const trReadyCount = (tTRs || []).filter((r: any) => isResourceReady(r)).length;
-    const trCRReady = gtrReadyCount + trReadyCount;
-    const trCRTotal = (gTRs?.length || 0) + (tTRs?.length || 0);
-    const trCRNotReady = trCRTotal - trCRReady;
-
-    let moReady = 0;
-    let moNotReady = 0;
-    let moUnknown = 0;
-    (managedObjects || []).forEach((obj: any) => {
-      if (!obj?.metadata?.creationTimestamp) {
-        moUnknown++;
+    let managedReady = 0;
+    let managedNotReady = 0;
+    let managedUnknown = 0;
+    (managedObjects || []).forEach(object => {
+      if (!object?.metadata?.creationTimestamp) {
+        managedUnknown++;
         return;
       }
-      const statusInfo = getManagedObjectReadyStatus(obj, allManagedApplied);
-      if (statusInfo.color === 'success' || statusInfo.label.toLowerCase() === 'true') {
-        moReady++;
-      } else if (statusInfo.color === 'error') {
-        moNotReady++;
+
+      const status = getManagedObjectReadyStatus(object, allManagedApplied);
+      if (status.color === 'success' || status.label.toLowerCase() === 'true') {
+        managedReady++;
+      } else if (status.color === 'error') {
+        managedNotReady++;
       } else {
-        moUnknown++;
+        managedUnknown++;
       }
     });
 
     return {
-      numTenants,
-      active,
-      cordoned,
-      managedNS,
-      numCQuotas,
-      numTR,
-      nsReady,
-      nsNotReady,
-      gqReady,
-      gqNotReady,
-      gqTotal: gQuotasList.length,
-      trCRReady,
-      trCRNotReady,
-      trCRTotal,
-      moReady,
-      moNotReady,
-      moUnknown,
-      moTotal: managedObjects?.length || 0,
+      tenants: {
+        active: activeTenants,
+        cordoned: cordonedTenants,
+        total: tenants?.length || 0,
+      },
+      namespaces: {
+        ready: readyNamespaces,
+        notReady: notReadyNamespaces,
+        total: readyNamespaces + notReadyNamespaces,
+      },
+      customQuotaHealth,
+      globalCustomQuotaHealth,
+      globalResourceQuotaState: {
+        ...globalResourceQuotaReadiness,
+        namespaces: globalResourceQuotaNamespaces,
+      },
+      tenantResourceReadiness,
+      globalTenantResourceReadiness,
+      tenantOwnerReadiness,
+      resourcePoolState,
+      managed: {
+        ready: managedReady,
+        notReady: managedNotReady,
+        unknown: managedUnknown,
+        total: managedObjects?.length || 0,
+      },
     };
-  }, [tenants, allNS, gQuotas, cQuotas, gTRs, tTRs, managedObjects]);
-
-  const recentTenants = useMemo(() => (tenants || []).slice(0, 6), [tenants]);
+  }, [
+    tenants,
+    customQuotas,
+    globalCustomQuotas,
+    globalResourceQuotas,
+    tenantResources,
+    globalTenantResources,
+    tenantOwners,
+    resourcePools,
+    managedObjects,
+    allManagedApplied,
+  ]);
 
   return (
     <>
@@ -127,169 +147,221 @@ export function CapsuleOverview() {
         to scope the UI.
       </Typography>
 
-      {/* Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard
-            label="TENANTS"
-            total={stats.numTenants}
-            fullHeight
-            pieSize={50}
-            segments={[
-              { name: 'Active', value: stats.active, color: '#4caf50' },
-              { name: 'Cordoned', value: stats.cordoned, color: '#ff9800' },
-            ]}
-            chips={[
-              { label: `${stats.active} Active`, color: 'success' },
-              { label: `${stats.cordoned} Cordoned`, color: 'warning' },
-            ]}
-          />
-        </Grid>
+      <SummaryCardGrid title="Tenant" columns={3}>
+        <StatCard
+          label="TENANTS"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.Tenant }}
+          total={stats.tenants.total}
+          fullHeight
+          segments={[
+            { name: 'Active', value: stats.tenants.active, color: '#4caf50' },
+            { name: 'Cordoned', value: stats.tenants.cordoned, color: '#ff9800' },
+          ]}
+          chips={[
+            { label: `${stats.tenants.active} Active`, color: 'success' },
+            { label: `${stats.tenants.cordoned} Cordoned`, color: 'warning' },
+          ]}
+          footer={footer('Cluster-scoped tenants')}
+        />
 
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard
-            label="MANAGED NAMESPACES"
-            total={stats.nsReady + stats.nsNotReady}
-            fullHeight
-            pieSize={50}
-            segments={[
-              { name: 'Ready', value: stats.nsReady, color: '#4caf50' },
-              { name: 'Not Ready', value: stats.nsNotReady, color: '#f44336' },
-            ]}
-            chips={[
-              { label: `${stats.nsReady} Ready`, color: 'success' },
-              { label: `${stats.nsNotReady} Not Ready` },
-            ]}
-            footer={
-              <Typography variant="body2" color="text.secondary">
-                Across all tenants
-              </Typography>
-            }
-          />
-        </Grid>
+        <StatCard
+          label="MANAGED NAMESPACES"
+          routeName="namespaces"
+          total={stats.namespaces.total}
+          fullHeight
+          segments={[
+            { name: 'Ready', value: stats.namespaces.ready, color: '#4caf50' },
+            { name: 'Not Ready', value: stats.namespaces.notReady, color: '#f44336' },
+          ]}
+          chips={[
+            { label: `${stats.namespaces.ready} Ready`, color: 'success' },
+            { label: `${stats.namespaces.notReady} Not Ready`, color: 'error' },
+          ]}
+          footer={footer('Across all tenants')}
+        />
 
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard
-            label="GLOBAL QUOTAS"
-            total={stats.gqTotal}
-            fullHeight
-            pieSize={50}
-            segments={[
-              { name: 'Ready', value: stats.gqReady, color: '#4caf50' },
-              { name: 'Not Ready', value: stats.gqNotReady, color: '#f44336' },
-            ]}
-            chips={[
-              { label: `${stats.gqReady} Ready`, color: 'success' },
-              { label: `${stats.gqNotReady} Not Ready` },
-            ]}
-            footer={
-              <Typography variant="body2" color="text.secondary">
-                + {stats.numCQuotas} namespaced Custom Quotas
-              </Typography>
-            }
-          />
-        </Grid>
+        <StatCard
+          label="TENANT OWNERS"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.TenantOwner }}
+          total={stats.tenantOwnerReadiness.total}
+          fullHeight
+          segments={[
+            { name: 'Ready', value: stats.tenantOwnerReadiness.ready, color: '#4caf50' },
+            {
+              name: 'Not Ready',
+              value: stats.tenantOwnerReadiness.notReady,
+              color: '#f44336',
+            },
+          ]}
+          chips={[
+            { label: `${stats.tenantOwnerReadiness.ready} Ready`, color: 'success' },
+            { label: `${stats.tenantOwnerReadiness.notReady} Not Ready`, color: 'error' },
+          ]}
+          footer={footer('Users, groups, and service accounts')}
+        />
+      </SummaryCardGrid>
 
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard
-            label="TENANT RESOURCES"
-            total={stats.trCRTotal}
-            fullHeight
-            pieSize={50}
-            segments={[
-              { name: 'Ready', value: stats.trCRReady, color: '#4caf50' },
-              {
-                name: 'Not Ready',
-                value: stats.trCRNotReady,
-                color: '#f44336',
-              },
-            ]}
-            chips={[
-              { label: `${stats.trCRReady} Ready`, color: 'success' },
-              { label: `${stats.trCRNotReady} Not Ready` },
-            ]}
-            footer={
-              <Typography variant="body2" color="text.secondary">
-                Global + Tenant-scoped
-              </Typography>
-            }
-          />
-        </Grid>
+      <SummaryCardGrid title="Quotas" columns={4}>
+        <StatCard
+          label="RESOURCE POOLS"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.ResourcePool }}
+          total={stats.resourcePoolState.total}
+          fullHeight
+          segments={[
+            { name: 'Ready', value: stats.resourcePoolState.ready, color: '#4caf50' },
+            {
+              name: 'Not Ready',
+              value: stats.resourcePoolState.notReady,
+              color: '#f44336',
+            },
+          ]}
+          chips={[
+            { label: `${stats.resourcePoolState.ready} Ready`, color: 'success' },
+            { label: `${stats.resourcePoolState.notReady} Not Ready`, color: 'error' },
+          ]}
+          footer={footer(
+            `${stats.resourcePoolState.claims} Claims · ${stats.resourcePoolState.exhausted} Exhausted`
+          )}
+        />
 
-        {/* Managed Resources */}
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard
-            label="MANAGED RESOURCES"
-            total={stats.moTotal}
-            fullHeight
-            pieSize={50}
-            segments={[
-              {
-                name: 'Ready',
-                value: stats.moReady + stats.moUnknown,
-                color: '#4caf50',
-              },
-              { name: 'Not Ready', value: stats.moNotReady, color: '#f44336' },
-            ]}
-            chips={[
-              {
-                label: `${stats.moReady + stats.moUnknown} Ready`,
-                color: 'success',
-              },
-              { label: `${stats.moNotReady} Not Ready` },
-              ...(stats.moUnknown > 0
-                ? [
-                    {
-                      label: `${stats.moUnknown} Unknown`,
-                      color: 'success' as const,
-                    },
-                  ]
-                : []),
-            ]}
-            footer={
-              <Typography variant="body2" color="text.secondary">
-                Global + Tenant-scoped
-              </Typography>
-            }
-          />
-        </Grid>
-      </Grid>
+        <StatCard
+          label="CUSTOM QUOTAS"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.CustomQuota }}
+          total={stats.customQuotaHealth.total}
+          fullHeight
+          segments={[
+            { name: 'Healthy', value: stats.customQuotaHealth.healthy, color: '#4caf50' },
+            { name: 'Warning', value: stats.customQuotaHealth.warning, color: '#ff9800' },
+            { name: 'Critical', value: stats.customQuotaHealth.critical, color: '#f44336' },
+          ]}
+          chips={[
+            { label: `${stats.customQuotaHealth.healthy} Healthy`, color: 'success' },
+            { label: `${stats.customQuotaHealth.warning} Warning`, color: 'warning' },
+            { label: `${stats.customQuotaHealth.critical} Critical`, color: 'error' },
+          ]}
+          footer={footer('Namespaced quota usage')}
+        />
 
-      {/* Tenants */}
-      <SectionBox title="Tenants">
-        {tenantsError && (
-          <Typography color="error" sx={{ mb: 1 }}>
-            Error loading tenants: {tenantsError.message || String(tenantsError)}
-          </Typography>
-        )}
-        {nsError && (
-          <Typography color="error" sx={{ mb: 1 }}>
-            Error loading namespaces.
-          </Typography>
-        )}
+        <StatCard
+          label="GLOBAL CUSTOM QUOTAS"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.GlobalCustomQuota }}
+          total={stats.globalCustomQuotaHealth.total}
+          fullHeight
+          segments={[
+            { name: 'Healthy', value: stats.globalCustomQuotaHealth.healthy, color: '#4caf50' },
+            { name: 'Warning', value: stats.globalCustomQuotaHealth.warning, color: '#ff9800' },
+            { name: 'Critical', value: stats.globalCustomQuotaHealth.critical, color: '#f44336' },
+          ]}
+          chips={[
+            { label: `${stats.globalCustomQuotaHealth.healthy} Healthy`, color: 'success' },
+            { label: `${stats.globalCustomQuotaHealth.warning} Warning`, color: 'warning' },
+            { label: `${stats.globalCustomQuotaHealth.critical} Critical`, color: 'error' },
+          ]}
+          footer={footer('Cluster-wide quota usage')}
+        />
 
-        {recentTenants.length === 0 && !tenantsError ? (
-          <Typography color="text.secondary">
-            No tenants found. Create your first Tenant to get started.
-          </Typography>
-        ) : (
-          <>
-            <ResourceListView
-              title=""
-              data={recentTenants}
-              headerProps={{
-                noSearch: true,
-                noNamespaceFilter: true,
-              }}
-              reflectInURL={false}
-              columns={tenantColumns}
-            />
-            <Typography sx={{ mt: 1.5 }}>
-              <Link routeName="tenants">View all tenants →</Link>
-            </Typography>
-          </>
-        )}
-      </SectionBox>
+        <StatCard
+          label="GLOBAL RESOURCE QUOTAS"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.GlobalResourceQuota }}
+          total={stats.globalResourceQuotaState.total}
+          segments={[
+            { name: 'Ready', value: stats.globalResourceQuotaState.ready, color: '#4caf50' },
+            {
+              name: 'Not Ready',
+              value: stats.globalResourceQuotaState.notReady,
+              color: '#f44336',
+            },
+          ]}
+          chips={[
+            { label: `${stats.globalResourceQuotaState.ready} Ready`, color: 'success' },
+            {
+              label: `${stats.globalResourceQuotaState.notReady} Not Ready`,
+              color: 'error',
+            },
+          ]}
+          footer={footer(`${stats.globalResourceQuotaState.namespaces} Namespaces in scope`)}
+        />
+      </SummaryCardGrid>
+
+      <SummaryCardGrid title="Replications" columns={3}>
+        <StatCard
+          label="TENANT RESOURCES"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.TenantResource }}
+          total={stats.tenantResourceReadiness.total}
+          fullHeight
+          segments={[
+            { name: 'Ready', value: stats.tenantResourceReadiness.ready, color: '#4caf50' },
+            {
+              name: 'Not Ready',
+              value: stats.tenantResourceReadiness.notReady,
+              color: '#f44336',
+            },
+          ]}
+          chips={[
+            { label: `${stats.tenantResourceReadiness.ready} Ready`, color: 'success' },
+            { label: `${stats.tenantResourceReadiness.notReady} Not Ready`, color: 'error' },
+          ]}
+          footer={footer('Namespaced replication rules')}
+        />
+
+        <StatCard
+          label="GLOBAL TENANT RESOURCES"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.GlobalTenantResource }}
+          total={stats.globalTenantResourceReadiness.total}
+          fullHeight
+          segments={[
+            {
+              name: 'Ready',
+              value: stats.globalTenantResourceReadiness.ready,
+              color: '#4caf50',
+            },
+            {
+              name: 'Not Ready',
+              value: stats.globalTenantResourceReadiness.notReady,
+              color: '#f44336',
+            },
+          ]}
+          chips={[
+            { label: `${stats.globalTenantResourceReadiness.ready} Ready`, color: 'success' },
+            {
+              label: `${stats.globalTenantResourceReadiness.notReady} Not Ready`,
+              color: 'error',
+            },
+          ]}
+          footer={footer('Cluster-scoped replication rules')}
+        />
+
+        <StatCard
+          label="MANAGED RESOURCES"
+          routeName="map"
+          routeSearch={{ group: 'tenant', show: 'all' }}
+          total={stats.managed.total}
+          fullHeight
+          segments={[
+            { name: 'Ready', value: stats.managed.ready, color: '#4caf50' },
+            { name: 'Not Ready', value: stats.managed.notReady, color: '#f44336' },
+            { name: 'Unknown', value: stats.managed.unknown, color: '#9e9e9e' },
+          ]}
+          chips={[
+            { label: `${stats.managed.ready} Ready`, color: 'success' },
+            { label: `${stats.managed.notReady} Not Ready`, color: 'error' },
+            ...(stats.managed.unknown > 0
+              ? [{ label: `${stats.managed.unknown} Unknown`, color: 'default' as const }]
+              : []),
+          ]}
+          footer={footer('Replicated objects')}
+        />
+      </SummaryCardGrid>
+
+      <CapsuleEvents />
     </>
   );
 }

@@ -93,8 +93,8 @@ export function QuotaClaims({
           </Box>
         </Tooltip>
       </Box>
-      {Object.entries(grouped).map(([kind, kindClaims]) => (
-        <Box key={kind} sx={{ mb: 3 }}>
+      {Object.entries(grouped).map(([kind, kindClaims], index, entries) => (
+        <Box key={kind} sx={{ mb: index === entries.length - 1 ? 0 : 3 }}>
           <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
             {kind} ({kindClaims.length})
           </Typography>
