@@ -9,6 +9,7 @@ const DOCUMENTATION_PATHS: Record<string, string> = {
   ResourcePoolClaim: '/docs/resource-management/resourcepools/#resourcepoolclaims',
   CustomQuota: '/docs/resource-management/customquotas/#customquota',
   GlobalCustomQuota: '/docs/resource-management/customquotas/#globalcustomquota',
+  GlobalProxySettings: '/docs/proxy/proxysettings/#globalproxysettings',
   GlobalTenantResource: '/docs/replications/global/',
   TenantResource: '/docs/replications/tenant/',
 };

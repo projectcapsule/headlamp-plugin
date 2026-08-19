@@ -3,7 +3,10 @@ import React, { Children, isValidElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { processNamespaceDetailsSections } from './NamespaceDetailsIntegration';
 import {
+  CAPSULE_NAMESPACE_CUSTOM_QUOTAS_SECTION_ID,
   CAPSULE_NAMESPACE_QUOTA_SECTION_ID,
+  CAPSULE_NAMESPACE_TENANT_RESOURCES_SECTION_ID,
+  HEADLAMP_NAMESPACE_DETAILS_VIEW_SECTION_ID,
   HEADLAMP_NAMESPACE_RESOURCE_QUOTAS_SECTION_ID,
 } from './namespaceDetailsSections';
 
@@ -36,6 +39,10 @@ vi.mock('../common/CapsuleResourceLink', () => ({
 vi.mock('./NamespaceQuotaSystems', () => ({
   NamespaceQuotaSystems: () => null,
 }));
+vi.mock('./NamespaceCapsuleResources', () => ({
+  NamespaceCustomQuotas: () => null,
+  NamespaceTenantResources: () => null,
+}));
 
 describe('Namespace details processor', () => {
   it('adds linked Tenant metadata and orders Capsule quotas before ResourceQuotas', () => {
@@ -57,12 +64,16 @@ describe('Namespace details processor', () => {
     const sections = processNamespaceDetailsSections(namespace, [
       { id: 'METADATA', section: metadata },
       { id: HEADLAMP_NAMESPACE_RESOURCE_QUOTAS_SECTION_ID, section: <div /> },
+      { id: HEADLAMP_NAMESPACE_DETAILS_VIEW_SECTION_ID, section: <div /> },
     ]);
 
     expect(sections.map(section => section.id)).toEqual([
       'METADATA',
       CAPSULE_NAMESPACE_QUOTA_SECTION_ID,
       HEADLAMP_NAMESPACE_RESOURCE_QUOTAS_SECTION_ID,
+      CAPSULE_NAMESPACE_CUSTOM_QUOTAS_SECTION_ID,
+      CAPSULE_NAMESPACE_TENANT_RESOURCES_SECTION_ID,
+      HEADLAMP_NAMESPACE_DETAILS_VIEW_SECTION_ID,
     ]);
 
     const metadataSection = sections[0].section as React.ReactElement<any>;

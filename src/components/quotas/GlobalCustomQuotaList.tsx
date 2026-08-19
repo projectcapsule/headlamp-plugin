@@ -76,6 +76,7 @@ export function GlobalCustomQuotasList() {
       </SummaryCardGrid>
 
       <ResourceListView
+        id="capsule-global-custom-quotas"
         title="Global Custom Quotas"
         resourceClass={GlobalCustomQuota}
         columns={[

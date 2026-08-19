@@ -23,6 +23,7 @@ export function GlobalTenantResourcesList() {
     <>
       <TenantResourcesStats items={items || []} scope="global" />
       <ResourceListView
+        id="capsule-global-tenant-resources"
         title="Global Tenant Resources"
         resourceClass={GlobalTenantResource}
         enableRowActions

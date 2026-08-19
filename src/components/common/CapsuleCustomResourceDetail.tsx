@@ -1,4 +1,8 @@
 import { useParams } from 'react-router-dom';
+import { CapsuleConfigurationDetail } from '../configuration/CapsuleConfigurationDetail';
+import { CapsuleConfigurationList } from '../configuration/CapsuleConfigurationList';
+import { GlobalProxySettingsDetail } from '../proxy/GlobalProxySettingsDetail';
+import { GlobalProxySettingsList } from '../proxy/GlobalProxySettingsList';
 import { CustomQuotaDetail } from '../quotas/CustomQuotaDetail';
 import { CustomQuotasList } from '../quotas/CustomQuotaList';
 import { GlobalCustomQuotaDetail } from '../quotas/GlobalCustomQuotaDetail';
@@ -17,8 +21,10 @@ import { TenantDetail } from '../tenants/TenantDetail';
 import { TenantsList } from '../tenants/TenantList';
 
 export type CapsuleCustomResourceDetailKind =
+  | 'CapsuleConfiguration'
   | 'CustomQuota'
   | 'GlobalCustomQuota'
+  | 'GlobalProxySettings'
   | 'GlobalResourceQuota'
   | 'GlobalTenantResource'
   | 'ResourcePool'
@@ -32,6 +38,8 @@ export function CapsuleCustomResourceDetail({ kind }: { kind: CapsuleCustomResou
   const objectNamespace = namespace === '-' ? undefined : namespace;
 
   switch (kind) {
+    case 'CapsuleConfiguration':
+      return <CapsuleConfigurationDetail name={crName} />;
     case 'Tenant':
       return <TenantDetail name={crName} />;
     case 'TenantOwner':
@@ -40,6 +48,8 @@ export function CapsuleCustomResourceDetail({ kind }: { kind: CapsuleCustomResou
       return <CustomQuotaDetail name={crName} namespace={objectNamespace} />;
     case 'GlobalCustomQuota':
       return <GlobalCustomQuotaDetail name={crName} />;
+    case 'GlobalProxySettings':
+      return <GlobalProxySettingsDetail name={crName} />;
     case 'GlobalResourceQuota':
       return <GlobalResourceQuotaDetail name={crName} />;
     case 'ResourcePool':
@@ -54,6 +64,8 @@ export function CapsuleCustomResourceDetail({ kind }: { kind: CapsuleCustomResou
 /** Reuses each plugin overview at the canonical Headlamp CRD list URL. */
 export function CapsuleCustomResourceList({ kind }: { kind: CapsuleCustomResourceDetailKind }) {
   switch (kind) {
+    case 'CapsuleConfiguration':
+      return <CapsuleConfigurationList />;
     case 'Tenant':
       return <TenantsList />;
     case 'TenantOwner':
@@ -62,6 +74,8 @@ export function CapsuleCustomResourceList({ kind }: { kind: CapsuleCustomResourc
       return <CustomQuotasList />;
     case 'GlobalCustomQuota':
       return <GlobalCustomQuotasList />;
+    case 'GlobalProxySettings':
+      return <GlobalProxySettingsList />;
     case 'GlobalResourceQuota':
       return <GlobalResourceQuotasList />;
     case 'ResourcePool':

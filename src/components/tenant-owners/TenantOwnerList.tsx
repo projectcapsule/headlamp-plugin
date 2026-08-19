@@ -88,6 +88,7 @@ export function TenantOwnersList() {
       </SummaryCardGrid>
 
       <ResourceListView
+        id="capsule-tenant-owners"
         title="Tenant Owners"
         resourceClass={TenantOwner}
         defaultSortingColumn={{ id: 'name', desc: false }}

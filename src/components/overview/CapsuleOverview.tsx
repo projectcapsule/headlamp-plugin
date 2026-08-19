@@ -2,6 +2,7 @@ import { Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { CustomQuota, GlobalCustomQuota } from '../../resources/customQuotas';
+import { GlobalProxySettings } from '../../resources/globalProxySettings';
 import { GlobalResourceQuota } from '../../resources/globalResourceQuotas';
 import { ResourcePool } from '../../resources/resourcePools';
 import { TenantOwner } from '../../resources/tenantOwners';
@@ -16,6 +17,7 @@ import { getTenantSpaces, isSpaceReady } from '../../utils/tenantSpaces';
 import { useFetchedResources } from '../common/ManagedResources';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
+import { summarizeGlobalProxySettings } from '../proxy/globalProxySettingsHelpers';
 import { CapsuleEvents } from './CapsuleEvents';
 import { countQuotaHealth, countReadiness, countResourcePools } from './overviewStats';
 
@@ -34,6 +36,7 @@ export function CapsuleOverview() {
   const [globalTenantResources] = GlobalTenantResource.useList();
   const [resourcePools] = ResourcePool.useList();
   const [tenantOwners] = TenantOwner.useList();
+  const [globalProxySettings, globalProxySettingsError] = GlobalProxySettings.useList();
 
   const allManagedApplied = useMemo(() => {
     const fromGlobal = (globalTenantResources || []).flatMap(resource =>
@@ -76,6 +79,7 @@ export function CapsuleOverview() {
     const globalTenantResourceReadiness = countReadiness(globalTenantResources);
     const tenantOwnerReadiness = countReadiness(tenantOwners);
     const resourcePoolState = countResourcePools(resourcePools);
+    const globalProxySettingsState = summarizeGlobalProxySettings(globalProxySettings);
 
     let managedReady = 0;
     let managedNotReady = 0;
@@ -117,6 +121,7 @@ export function CapsuleOverview() {
       globalTenantResourceReadiness,
       tenantOwnerReadiness,
       resourcePoolState,
+      globalProxySettingsState,
       managed: {
         ready: managedReady,
         notReady: managedNotReady,
@@ -133,6 +138,7 @@ export function CapsuleOverview() {
     globalTenantResources,
     tenantOwners,
     resourcePools,
+    globalProxySettings,
     managedObjects,
     allManagedApplied,
   ]);
@@ -358,6 +364,44 @@ export function CapsuleOverview() {
               : []),
           ]}
           footer={footer('Replicated objects')}
+        />
+      </SummaryCardGrid>
+
+      <SummaryCardGrid title="Proxy" columns={3}>
+        <StatCard
+          label="GLOBAL PROXY SETTINGS"
+          routeName="customresources"
+          routeParams={{ crd: CAPSULE_CRDS.GlobalProxySettings }}
+          total={stats.globalProxySettingsState.total}
+          fullHeight
+          emptyLabel={globalProxySettingsError ? 'Unavailable' : 'None'}
+          segments={[
+            {
+              name: 'Ready',
+              value: stats.globalProxySettingsState.ready,
+              color: '#4caf50',
+            },
+            {
+              name: 'Not Ready',
+              value: stats.globalProxySettingsState.notReady,
+              color: '#f44336',
+            },
+          ]}
+          chips={[
+            {
+              label: `${stats.globalProxySettingsState.ready} Ready`,
+              color: 'success',
+            },
+            {
+              label: `${stats.globalProxySettingsState.notReady} Not Ready`,
+              color: 'error',
+            },
+          ]}
+          footer={footer(
+            globalProxySettingsError
+              ? 'Capsule Proxy API unavailable'
+              : `${stats.globalProxySettingsState.rules} Rules · ${stats.globalProxySettingsState.subjects} Subjects`
+          )}
         />
       </SummaryCardGrid>
 

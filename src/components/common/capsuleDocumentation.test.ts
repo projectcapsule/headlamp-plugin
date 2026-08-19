@@ -18,6 +18,7 @@ describe('Capsule documentation actions', () => {
     ['ResourcePoolClaim', '/docs/resource-management/resourcepools/#resourcepoolclaims'],
     ['CustomQuota', '/docs/resource-management/customquotas/#customquota'],
     ['GlobalCustomQuota', '/docs/resource-management/customquotas/#globalcustomquota'],
+    ['GlobalProxySettings', '/docs/proxy/proxysettings/#globalproxysettings'],
     ['GlobalTenantResource', '/docs/replications/global/'],
     ['TenantResource', '/docs/replications/tenant/'],
   ])('maps %s to its documentation path', (kind, path) => {

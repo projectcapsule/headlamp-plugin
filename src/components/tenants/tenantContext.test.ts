@@ -6,7 +6,7 @@ import {
 } from './tenantContext';
 
 describe('Tenant context selection', () => {
-  it('treats an empty selection as All Tenants', () => {
+  it('treats an empty selection as no Tenant filter', () => {
     expect(parseStoredTenantSelection(null)).toEqual([]);
     expect(parseStoredTenantSelection('[]')).toEqual([]);
   });
@@ -34,7 +34,7 @@ describe('Tenant context selection', () => {
           annotations: {
             'info.projectcapsule.dev/icon': 'mdi:white-balance-sunny',
             'info.projectcapsule.dev/links':
-              '[{"title":"Dashboard","url":"https://example.com/dev"}]',
+              '[{"title":"Dashboard","url":"https://example.com/dev","icon":"mdi:view-dashboard"}]',
           },
         },
       },
@@ -46,7 +46,13 @@ describe('Tenant context selection', () => {
       {
         name: 'solar-dev',
         icon: 'mdi:white-balance-sunny',
-        links: [{ title: 'Dashboard', url: 'https://example.com/dev' }],
+        links: [
+          {
+            title: 'Dashboard',
+            url: 'https://example.com/dev',
+            icon: 'mdi:view-dashboard',
+          },
+        ],
       },
     ]);
   });

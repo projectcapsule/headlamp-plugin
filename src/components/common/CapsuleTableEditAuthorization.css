@@ -1,0 +1,11 @@
+/*
+ * Headlamp 0.44's EditButton forgets to forward buttonStyle="menu" when an
+ * update authorization check is denied. That creates an icon-only ViewButton
+ * as a direct child of the row-actions menu, in addition to the table's normal
+ * View YAML MenuItem. ViewButton is the only row action that sets edge="end",
+ * so this selector removes the malformed fallback without hiding the normal
+ * View YAML entry or an authorized Edit entry.
+ */
+.MuiMenu-list[role='menu'] > button.MuiIconButton-edgeEnd {
+  display: none;
+}

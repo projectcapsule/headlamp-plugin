@@ -2,6 +2,29 @@ function objectData(item: any) {
   return item?.jsonData || item || {};
 }
 
+export type TenantStateChipColor = 'success' | 'warning' | 'error' | 'info';
+
+export function tenantStateChipColor(state: unknown): TenantStateChipColor {
+  switch (
+    String(state || '')
+      .trim()
+      .toLowerCase()
+  ) {
+    case 'active':
+    case 'ready':
+      return 'success';
+    case 'cordoned':
+      return 'warning';
+    case 'failed':
+    case 'error':
+    case 'notready':
+    case 'not ready':
+      return 'error';
+    default:
+      return 'info';
+  }
+}
+
 export interface PromotedServiceAccount {
   clusterRoles: string[];
   identity: string;

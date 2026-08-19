@@ -10,6 +10,7 @@ import { Tenants } from '../../resources/tenants';
 import {
   getTenantBanner,
   getTenantIcon,
+  getTenantLinkIcon,
   getTenantLinks,
   isImageRef,
   safeUrl,
@@ -19,6 +20,12 @@ import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { NamespaceCordonAction } from '../common/ReconcileActions';
 import { TENANT_REFRESH_EVENT } from '../common/tenantCordon';
+import { TenantVisualIcon } from '../common/TenantVisualIcon';
+import {
+  persistentVolumeClaimsForVolumes,
+  persistentVolumesForTenant,
+} from '../storage/persistentVolumeTenant';
+import { TenantPersistentVolumes } from '../storage/TenantPersistentVolumes';
 import { TenantNamespaceFlow } from './TenantNamespaceFlow';
 import { TenantQuotaOverview } from './TenantQuotaOverview';
 import {
@@ -38,6 +45,8 @@ export function TenantDetail(props: TenantProps) {
 
   const [tenants, tenantsError] = Tenants.useList();
   const [allNamespaces] = K8s.ResourceClasses.Namespace.useList();
+  const [allPersistentVolumes] = K8s.ResourceClasses.PersistentVolume.useList();
+  const [allPersistentVolumeClaims] = K8s.ResourceClasses.PersistentVolumeClaim.useList();
   const listedTenant = useMemo(
     () => tenants?.find((item: any) => item.getName() === name),
     [tenants, name]
@@ -68,6 +77,14 @@ export function TenantDetail(props: TenantProps) {
     const names = new Set(getTenantSpaceNames(tenant));
     return allNamespaces.filter((namespace: any) => names.has(namespace.getName()));
   }, [allNamespaces, tenant]);
+  const tenantPersistentVolumes = useMemo(
+    () => persistentVolumesForTenant(allPersistentVolumes, name),
+    [allPersistentVolumes, name]
+  );
+  const tenantPersistentVolumeClaims = useMemo(
+    () => persistentVolumeClaimsForVolumes(allPersistentVolumeClaims, tenantPersistentVolumes),
+    [allPersistentVolumeClaims, tenantPersistentVolumes]
+  );
 
   const nsVal = tenant?.status?.namespaces ?? tenant?.jsonData?.status?.namespaces;
   const numNamespaces = typeof nsVal === 'number' ? nsVal : nsVal?.length ?? 0;
@@ -204,6 +221,12 @@ export function TenantDetail(props: TenantProps) {
           <TenantQuotaOverview tenant={tenant} />
 
           <TenantNamespacesOverview tenant={tenant} tenantNamespaces={tenantNamespaces} />
+
+          <TenantPersistentVolumes
+            claims={tenantPersistentVolumeClaims}
+            tenantName={name}
+            volumes={tenantPersistentVolumes}
+          />
 
           <TenantPromotedServiceAccounts tenant={tenant} promotions={promotedServiceAccounts} />
 
@@ -365,19 +388,7 @@ function TenantHeaderTitle({ name, tenant }: { name: string; tenant?: any }) {
 
   return (
     <Box component="span" sx={{ alignItems: 'center', display: 'inline-flex', gap: 1.25 }}>
-      {icon &&
-        (isImageRef(icon) ? (
-          <Avatar
-            component="span"
-            src={safeUrl(icon)}
-            alt=""
-            sx={{ border: '1px solid', borderColor: 'divider', height: 38, width: 38 }}
-          />
-        ) : (
-          <Box component="span" sx={{ alignItems: 'center', display: 'inline-flex' }}>
-            <Icon icon={icon} width={36} height={36} />
-          </Box>
-        ))}
+      <TenantVisualIcon icon={icon} size={38} />
       <Box component="span">Tenant: {name}</Box>
     </Box>
   );
@@ -392,7 +403,7 @@ function TenantLinks({ tenant }: { tenant?: any }) {
       <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1 }}>
         {links.map((link, index) => {
           const href = safeUrl(link.url);
-          const linkIcon = link.icon;
+          const linkIcon = getTenantLinkIcon(link);
           return (
             <Chip
               key={`${link.title || link.url}-${index}`}
@@ -405,14 +416,29 @@ function TenantLinks({ tenant }: { tenant?: any }) {
               icon={
                 linkIcon ? (
                   isImageRef(linkIcon) ? (
-                    <Avatar src={safeUrl(linkIcon)} alt="" />
+                    <Avatar
+                      src={safeUrl(linkIcon)}
+                      alt=""
+                      variant="rounded"
+                      sx={{ height: 30, width: 30 }}
+                    />
                   ) : (
-                    <Icon icon={linkIcon} />
+                    <Icon icon={linkIcon} width={28} height={28} />
                   )
                 ) : (
-                  <Icon icon="mdi:open-in-new" />
+                  <Icon icon="mdi:open-in-new" width={24} height={24} />
                 )
               }
+              sx={{
+                fontSize: '0.95rem',
+                height: 44,
+                '& .MuiChip-icon': {
+                  fontSize: 28,
+                  height: 30,
+                  marginLeft: '8px',
+                  width: 30,
+                },
+              }}
               variant="outlined"
             />
           );

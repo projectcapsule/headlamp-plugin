@@ -1,6 +1,8 @@
 export const CAPSULE_CRDS = {
+  CapsuleConfiguration: 'capsuleconfigurations.capsule.clastix.io',
   CustomQuota: 'customquotas.capsule.clastix.io',
   GlobalCustomQuota: 'globalcustomquotas.capsule.clastix.io',
+  GlobalProxySettings: 'globalproxysettings.capsule.clastix.io',
   GlobalResourceQuota: 'globalresourcequotas.capsule.clastix.io',
   GlobalTenantResource: 'globaltenantresources.capsule.clastix.io',
   ResourcePool: 'resourcepools.capsule.clastix.io',

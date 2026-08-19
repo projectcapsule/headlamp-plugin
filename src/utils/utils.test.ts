@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { parseKubernetesQuantity, usageChipColor, usageHex, usagePercent } from './quantity';
-import { isImageRef, safeUrl } from './tenantMeta';
+import {
+  getLinkFaviconUrl,
+  getTenantIcon,
+  getTenantLinkIcon,
+  getTenantLinks,
+  isImageRef,
+  normalizeFontAwesomeRef,
+  normalizeIconRef,
+  normalizeTenantLinks,
+  safeUrl,
+} from './tenantMeta';
 import { findSpaceInfo, getTenantSpaceNames, getTenantSpaces, isSpaceReady } from './tenantSpaces';
 
 describe('parseKubernetesQuantity', () => {
@@ -89,6 +99,118 @@ describe('isImageRef', () => {
     expect(isImageRef('mdi:home')).toBe(false);
     expect(isImageRef('javascript:alert(1)')).toBe(false);
     expect(isImageRef('mailto:a@b.com')).toBe(false);
+  });
+});
+
+describe('tenant annotation links', () => {
+  it('supports native Iconify and common Font Awesome class references', () => {
+    expect(normalizeIconRef('fa6-solid:chart-line')).toBe('fa6-solid:chart-line');
+    expect(normalizeFontAwesomeRef('fa-solid fa-chart-line')).toBe('fa6-solid:chart-line');
+    expect(normalizeFontAwesomeRef('fas fa-chart-line fa-fw')).toBe('fa-solid:chart-line');
+    expect(normalizeFontAwesomeRef('fa-regular fa-file-lines')).toBe('fa6-regular:file-lines');
+    expect(normalizeFontAwesomeRef('fab fa-github')).toBe('fa-brands:github');
+    expect(normalizeFontAwesomeRef('fa-house')).toBe('fa6-solid:house');
+    expect(
+      getTenantIcon({
+        metadata: {
+          annotations: { 'info.projectcapsule.dev/icon': 'fa-solid fa-building' },
+        },
+      })
+    ).toBe('fa6-solid:building');
+  });
+
+  it('preserves an independent Iconify name or image URL for every link', () => {
+    const links = getTenantLinks({
+      metadata: {
+        annotations: {
+          'info.projectcapsule.dev/links': JSON.stringify([
+            {
+              title: 'Grafana',
+              url: 'https://grafana.example.com',
+              icon: 'mdi:grafana',
+            },
+            {
+              title: 'Runbook',
+              url: 'https://docs.example.com',
+              icon: 'https://docs.example.com/icon.svg',
+            },
+          ]),
+        },
+      },
+    });
+
+    expect(links).toEqual([
+      {
+        title: 'Grafana',
+        url: 'https://grafana.example.com',
+        icon: 'mdi:grafana',
+      },
+      {
+        title: 'Runbook',
+        url: 'https://docs.example.com',
+        icon: 'https://docs.example.com/icon.svg',
+      },
+    ]);
+  });
+
+  it('normalizes fields and drops malformed link entries', () => {
+    expect(
+      normalizeTenantLinks([
+        null,
+        'bad',
+        { title: '  Dashboard  ', url: ' /dashboard ', icon: ' mdi:view-dashboard ' },
+        { icon: 'mdi:help' },
+      ])
+    ).toEqual([{ title: 'Dashboard', url: '/dashboard', icon: 'mdi:view-dashboard' }]);
+  });
+
+  it('resolves derived, explicit, and icon-keyword favicons', () => {
+    expect(getLinkFaviconUrl('https://grafana.example.com/d/tenant?view=1')).toBe(
+      'https://grafana.example.com/favicon.ico'
+    );
+    expect(
+      getTenantLinkIcon({
+        title: 'Grafana',
+        url: 'https://grafana.example.com/d/tenant',
+        favicon: true,
+      })
+    ).toBe('https://grafana.example.com/favicon.ico');
+    expect(
+      getTenantLinkIcon({
+        title: 'Runbook',
+        url: 'https://wiki.example.com',
+        favicon: 'https://cdn.example.com/runbook.ico',
+      })
+    ).toBe('https://cdn.example.com/runbook.ico');
+    expect(
+      getTenantLinkIcon({
+        title: 'Dashboard',
+        url: 'https://example.com/dashboard',
+        icon: 'favicon',
+      })
+    ).toBe('https://example.com/favicon.ico');
+  });
+
+  it('prefers a valid explicit icon and rejects unsafe favicon references', () => {
+    expect(
+      getTenantLinkIcon({
+        url: 'https://example.com',
+        icon: 'mdi:view-dashboard',
+        favicon: true,
+      })
+    ).toBe('mdi:view-dashboard');
+    expect(
+      getTenantLinkIcon({
+        url: 'https://example.com',
+        icon: 'fa-solid fa-arrow-up-right-from-square',
+      })
+    ).toBe('fa6-solid:arrow-up-right-from-square');
+    expect(
+      getTenantLinkIcon({
+        url: 'mailto:owner@example.com',
+        favicon: 'javascript:alert(1)',
+      })
+    ).toBeUndefined();
   });
 });
 

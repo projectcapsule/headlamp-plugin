@@ -82,6 +82,7 @@ export function GlobalResourceQuotasList() {
       </SummaryCardGrid>
 
       <ResourceListView
+        id="capsule-global-resource-quotas"
         title="Global Resource Quotas"
         resourceClass={GlobalResourceQuota}
         defaultSortingColumn={{ id: 'name', desc: false }}

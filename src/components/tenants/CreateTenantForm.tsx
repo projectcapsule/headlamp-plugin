@@ -197,9 +197,9 @@ export default function CreateTenantForm(props: CreateTenantFormProps) {
           label="Links (JSON)"
           value={linksInput}
           onChange={e => updateLinks(e.target.value)}
-          placeholder='[{"title":"Grafana","url":"https://..."},{"title":"Docs","url":"https://..."}]'
+          placeholder='[{"title":"Grafana","url":"https://...","icon":"fa-solid fa-chart-line"}]'
           sx={{ mb: 1 }}
-          helperText="JSON array of {title, url, optional icon}. Shown as quick links."
+          helperText="Per link: icon accepts Font Awesome classes, Iconify names, or image URLs."
         />
 
         <TextField

@@ -3,9 +3,17 @@ import {
   parseServiceAccountIdentity,
   tenantNamespaceQuota,
   tenantPromotedServiceAccounts,
+  tenantStateChipColor,
 } from './tenantStatusHelpers';
 
 describe('Tenant status helpers', () => {
+  it('gives active and cordoned selector states distinct semantic colors', () => {
+    expect(tenantStateChipColor('Active')).toBe('success');
+    expect(tenantStateChipColor('Cordoned')).toBe('warning');
+    expect(tenantStateChipColor('NotReady')).toBe('error');
+    expect(tenantStateChipColor('Pending')).toBe('info');
+  });
+
   it('parses Kubernetes ServiceAccount identities', () => {
     expect(parseServiceAccountIdentity('system:serviceaccount:solar-test:robot')).toEqual({
       name: 'robot',

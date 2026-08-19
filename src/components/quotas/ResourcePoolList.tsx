@@ -76,6 +76,7 @@ export function ResourcePoolsList() {
       </SummaryCardGrid>
 
       <ResourceListView
+        id="capsule-resource-pools"
         title="Resource Pools"
         resourceClass={ResourcePool}
         defaultSortingColumn={{ id: 'peak-usage', desc: true }}

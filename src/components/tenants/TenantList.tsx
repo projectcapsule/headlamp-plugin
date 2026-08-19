@@ -5,13 +5,14 @@ import type {
   ColumnType,
   ResourceTableColumn,
 } from '@kinvolk/headlamp-plugin/lib/components/common';
-import { Avatar, Box, Chip, Tooltip, Typography } from '@mui/material';
+import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { Tenants } from '../../resources/tenants';
 import {
   getTenantDescription,
   getTenantIcon,
+  getTenantLinkIcon,
   getTenantLinks,
   isImageRef,
   safeUrl,
@@ -21,6 +22,7 @@ import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { TenantCordonAction } from '../common/ReconcileActions';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
+import { TenantVisualIcon } from '../common/TenantVisualIcon';
 
 export const tenantColumns: (ResourceTableColumn<Tenants> | ColumnType)[] = [
   {
@@ -36,7 +38,7 @@ export const tenantColumns: (ResourceTableColumn<Tenants> | ColumnType)[] = [
             <CapsuleResourceLink crd={CAPSULE_CRDS.Tenant} name={item.getName()}>
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 {item.getName()}
-                {icon && <Avatar src={safeUrl(icon)} sx={{ width: 24, height: 24 }} />}
+                <TenantVisualIcon icon={icon} size={24} />
               </Box>
             </CapsuleResourceLink>
           </Tooltip>
@@ -75,32 +77,35 @@ export const tenantColumns: (ResourceTableColumn<Tenants> | ColumnType)[] = [
       if (links.length === 0) return '—';
       return (
         <Box sx={{ display: 'flex', gap: 0.25, flexWrap: 'wrap' }}>
-          {links.slice(0, 2).map((link, i: number) => (
-            <Chip
-              key={i}
-              size="small"
-              label={link.title || 'Link'}
-              component="a"
-              href={safeUrl(link.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              icon={
-                link.icon ? (
-                  isImageRef(link.icon) ? (
-                    <img
-                      src={safeUrl(link.icon)}
-                      style={{ width: 14, height: 14, objectFit: 'contain' }}
-                      alt=""
-                    />
-                  ) : Icon && typeof Icon === 'function' ? (
-                    <Icon icon={link.icon} style={{ fontSize: 14 }} />
+          {links.slice(0, 2).map((link, i: number) => {
+            const linkIcon = getTenantLinkIcon(link);
+            return (
+              <Chip
+                key={i}
+                size="small"
+                label={link.title || 'Link'}
+                component="a"
+                href={safeUrl(link.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                icon={
+                  linkIcon ? (
+                    isImageRef(linkIcon) ? (
+                      <img
+                        src={safeUrl(linkIcon)}
+                        style={{ width: 14, height: 14, objectFit: 'contain' }}
+                        alt=""
+                      />
+                    ) : Icon && typeof Icon === 'function' ? (
+                      <Icon icon={linkIcon} style={{ fontSize: 14 }} />
+                    ) : undefined
                   ) : undefined
-                ) : undefined
-              }
-              sx={{ height: 18, fontSize: '0.6rem' }}
-            />
-          ))}
+                }
+                sx={{ height: 18, fontSize: '0.6rem' }}
+              />
+            );
+          })}
           {links.length > 2 && (
             <Chip
               size="small"
@@ -237,6 +242,7 @@ export function TenantsList() {
       </SummaryCardGrid>
 
       <ResourceListView
+        id="capsule-tenants"
         title="Tenants"
         resourceClass={Tenants}
         columns={tenantColumns}

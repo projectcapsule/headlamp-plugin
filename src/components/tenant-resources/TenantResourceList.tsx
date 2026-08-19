@@ -23,6 +23,7 @@ export function TenantResourcesList() {
     <>
       <TenantResourcesStats items={items || []} scope="tenant" />
       <ResourceListView
+        id="capsule-tenant-resources"
         title="Tenant Resources"
         resourceClass={TenantResource}
         enableRowActions

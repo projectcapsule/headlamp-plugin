@@ -12,7 +12,10 @@ Progressively develop the Capsule plugin against the reproducible in-cluster
 Headlamp environment. The current feature set includes the expanded/aligned
 overview, consistently aligned subpages, Capsule-aware resource map grouping,
 replication diagrams with inline SSA ownership inspection, and a Tenant detail
-flow that visualizes the Tenant-to-Namespace relationship.
+flow that visualizes the Tenant-to-Namespace relationship. Capsule Proxy's
+optional GlobalProxySettings API is also a first-class overview/menu/detail
+surface. CapsuleConfiguration health and effective controller settings are
+available under the dedicated Capsule Settings navigation group.
 
 The in-cluster development environment lives under `deploy/headlamp/` and is
 orchestrated by `hack/headlamp-dev.sh` plus the root `Makefile`. Keep this file
@@ -26,7 +29,15 @@ commands change.
 - Supported Node.js versions: 22 and 24; `.nvmrc` and `.node-version` pin 24
 - npm: 11.17.0
 - Available tools: `kubectl`, `helm`, `kind`, and `docker`
-- Current Kubernetes context: `kind-capsule`
+- As of 2026-08-19 the main kubeconfig has no current context and contains only
+  `admin@cluster-a`, although `kind get clusters` reports the local `capsule`
+  cluster. Use a task-specific kubeconfig such as
+  `kind export kubeconfig --name capsule --kubeconfig /tmp/headlamp-kind-capsule-kubeconfig`
+  rather than silently rewriting the contributor's main kubeconfig.
+- The standalone Helm-owned development environment remains available through
+  `make headlamp-deploy`, but do not run it over a playground installation
+  without explicit direction. Use `make headlamp-playground-reload` once the
+  playground's Flux-managed Headlamp HelmRelease exists.
 - Other known context: `admin@cluster-a`
 - Cluster API access may require running outside the filesystem/network sandbox
   because the kind API is exposed on localhost.
@@ -56,6 +67,33 @@ overridden.
 
 ## In-cluster development workflow
 
+### Existing Flux playground Headlamp
+
+- `make headlamp-playground-reload` is the fast path for a Headlamp already
+  installed by the Capsule playground. It dynamically reads
+  `flux-system/headlamp.spec.targetNamespace`, finds the Deployment through its
+  Flux ownership labels, and verifies the expected `headlamp` and
+  `headlamp-plugin` containers.
+- The reload target builds `dist/main.js`, suspends only the Headlamp
+  HelmRelease, copies `main.js` and `package.json` into
+  `/build/plugins/capsule` through the plugin-manager sidecar, verifies the
+  SHA-256, and sends SIGTERM only to PID 1 in the Headlamp server container.
+  Kubelet restarts that container while the pod and its shared EmptyDir remain,
+  which refreshes Headlamp's plugin cache without losing the injected bundle.
+- `make headlamp-playground-status` reports suspension/readiness, workload and
+  pod state, the plugin files, and matching local/pod checksums.
+- `make headlamp-playground-resume` sets `spec.suspend: false` and requests a
+  Flux reconciliation. The current injected bundle stays until a later pod
+  rollout recreates the EmptyDir. Do not expect this development injection to
+  persist across a Headlamp rollout.
+- Defaults are HelmRelease `flux-system/headlamp`, containers `headlamp` and
+  `headlamp-plugin`, and plugin path `/build/plugins/capsule`. The script exposes
+  overrides for context, Flux/workload namespaces, release/deployment,
+  containers, plugin directory/name, and Node binary. See
+  `deploy/headlamp/README.md`.
+
+### Standalone Helm-owned Headlamp
+
 - `make headlamp-deploy` builds `dist/main.js`, builds the local plugin image,
   loads it into kind, and installs or upgrades the pinned Headlamp Helm chart.
   The loader falls back to `ctr images import` on each kind node because kind
@@ -84,10 +122,11 @@ overridden.
   the main diagnostics.
 - `make headlamp-undeploy` removes the Helm release but preserves its namespace.
 
-Defaults are the current kube context, namespace `capsule-system`, release
-`capsule-headlamp`, plugin image `capsule-headlamp-plugin:dev`, and Headlamp
-chart `0.44.0`. See `deploy/headlamp/README.md` for environment overrides and
-remote-cluster usage.
+The standalone script defaults are the current kube context, namespace `capsule-system`,
+release `capsule-headlamp`, plugin image `capsule-headlamp-plugin:dev`, and
+Headlamp chart `0.44.0`. On a playground-managed cluster use the separate
+playground target instead of installing this release. See
+`deploy/headlamp/README.md` for environment overrides and remote-cluster usage.
 
 `hack/headlamp-dev.sh` validates Node before building. It uses `npx node@24`
 when the active Node is unsupported; a version manager or `NODE_BIN` override
@@ -102,11 +141,13 @@ replace it with API- and verb-scoped roles there.
 
 ## Overview dashboard
 
-- `src/components/overview/CapsuleOverview.tsx` renders three semantic summary
-  rows: Tenant (3 cards), Quotas (4 cards), and Replications (3 cards).
-- The ten dedicated panels are Tenants, Managed Namespaces, Tenant Owners,
+- `src/components/overview/CapsuleOverview.tsx` renders four semantic summary
+  rows: Tenant (3 cards), Quotas (4 cards), Replications (3 cards), and Proxy
+  (1 card).
+- The eleven dedicated panels are Tenants, Managed Namespaces, Tenant Owners,
   Resource Pools, Custom Quotas, Global Custom Quotas, Global Resource Quotas,
-  Tenant Resources, Global Tenant Resources, and Managed Resources.
+  Tenant Resources, Global Tenant Resources, Managed Resources, and Global
+  Proxy Settings.
 - `src/components/overview/overviewStats.ts` contains the tested readiness,
   quota-health, and ResourcePool aggregation logic.
 - `src/resources/resourcePools.ts` models both cluster-scoped ResourcePools and
@@ -114,6 +155,10 @@ replace it with API- and verb-scoped roles there.
   cluster-scoped TenantOwner API.
 - `src/resources/globalResourceQuotas.ts` models the cluster-scoped
   `GlobalResourceQuota` API, including aggregate totals and per-namespace usage.
+- `src/resources/globalProxySettings.ts` models Capsule Proxy's optional,
+  cluster-scoped `capsule.clastix.io/v1beta1` GlobalProxySettings API. The
+  overview must tolerate a missing CRD and show the Proxy tile as unavailable;
+  the static Proxy menu remains useful as an installation/access diagnostic.
 - GlobalResourceQuota has dedicated list and detail routes under
   `/capsule/global-resource-quotas/`. The list shows readiness, peak capacity
   health, namespace scope, and exact per-resource used/hard values. The detail
@@ -136,7 +181,7 @@ replace it with API- and verb-scoped roles there.
 - Managed-resource `Unknown` status is a separate gray segment and must not be
   counted as Ready.
 - Overview `StatCard`s are fully keyboard-accessible, cluster-aware links when
-  `routeName` is provided. All ten overview cards navigate to their dedicated
+  `routeName` is provided. All eleven overview cards navigate to their dedicated
   plugin page, the Kubernetes Namespaces page, an appropriate generic custom
   resource list, or the all-sources tenant-grouped map for Managed Resources.
 - The overview no longer renders the duplicate recent-Tenants table or its
@@ -171,6 +216,13 @@ replace it with API- and verb-scoped roles there.
   duplicate title spacing. Its layout is intentionally vertical: the full-width
   Tenant-to-Namespace XYFlow comes first and the searchable Namespace table is
   below it. Do not return this section to the cramped side-by-side grid.
+- Editable Capsule `ResourceListView` tables use stable `capsule-*` IDs and the
+  standard Headlamp row-actions dropdown. `CapsuleTableEditAuthorization.tsx`
+  mounts Headlamp's public `AuthVisible` update check invisibly in each rendered
+  Name cell, so the built-in Edit menu item is warmed before the dropdown is
+  opened. Do not restore a dedicated Edit column: the expected UX matches the
+  Pods table. Events and managed-resource inventory tables remain read-only and
+  are deliberately excluded from the prewarm processor.
 - `src/components/common/ConditionsAndEvents.tsx` is used by every dedicated
   Capsule detail page, including TenantOwner, all quota/ResourcePool pages, and
   both replication-resource pages. It renders Events immediately with Conditions
@@ -246,8 +298,12 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   before Headlamp's `headlamp.namespace-owned-resourcequotas` section and adds a
   linked Tenant row to the existing top metadata table. The Namespace label
   `capsule.clastix.io/tenant` is authoritative; live Tenant status is the
-  fallback. Do not restore the append-only `registerDetailsViewSection` path,
-  because it places Capsule quotas after Pods and ResourceQuotas.
+  fallback. Before Headlamp's final Namespace details section it also inserts
+  name-sorted, searchable owned-resource tables for namespaced CustomQuotas and
+  TenantResources. Those tables use the Namespace and cluster directly, omit a
+  redundant Namespace column, and link every object to its rich Capsule detail
+  page. Do not restore the append-only `registerDetailsViewSection` path,
+  because it places Capsule resources after the wrong native sections.
 - `NamespaceQuotaSystems.tsx` combines referencing CustomQuota,
   GlobalCustomQuota, GlobalResourceQuota, and ResourcePool objects in one
   animated graph. Its single `Allocation type` selector reuses `?resource=` and
@@ -285,6 +341,51 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   requires consumers to free claimed resources first. Contract source:
   <https://projectcapsule.dev/docs/resource-management/resourcepools/>.
 
+## Capsule Proxy
+
+- Capsule Proxy is optional. The plugin deliberately focuses on the preferred
+  cluster-scoped `GlobalProxySettings`; it does not add a rich page for the
+  older namespaced ProxySetting API. Official contract source:
+  <https://projectcapsule.dev/docs/proxy/proxysettings/#globalproxysettings>.
+- `components/proxy/GlobalProxySettingsList.tsx` shows readiness/message plus
+  rule, unique-subject, and cluster-resource counts. Its three-card grid
+  summarizes Ready state, subject kinds, and label-filtered cluster resource
+  grants. Tables default to Name ascending.
+- `GlobalProxySettingsDetail.tsx` keeps Conditions and Events together, exposes
+  Ready and observed generation in metadata, and flattens every configured
+  cluster-resource entry into a readable Proxy Rules table with subjects, API
+  groups, resources, operations, and selectors.
+- `globalProxySettingsHelpers.ts` owns all normalization and summary logic,
+  including deterministic selector formatting and unique `Kind/name` subject
+  counting. Keep these functions tested against both direct KubeObject-style
+  fields and raw `jsonData` objects.
+- Both list and detail pages render a friendly installation/access message when
+  the CRD request fails. Do not let an absent optional Capsule Proxy installation
+  crash or hide the rest of the Capsule overview.
+
+## Capsule Settings
+
+- Capsule navigation contains **Settings → Capsule Configuration**, backed by
+  the cluster-scoped `capsuleconfigurations.capsule.clastix.io/v1beta2` API.
+  Both the canonical Custom Resources URLs and the legacy `/capsule/settings/`
+  aliases reuse `CapsuleConfigurationList.tsx` and
+  `CapsuleConfigurationDetail.tsx`.
+- The list health grid shows Ready/Reconciling/Not Ready/Unknown state, managed
+  Tenants, reconciled identity kinds, and mutating/validating admission webhook
+  counts. A Ready condition is only considered healthy when its observed
+  generation has caught up with metadata generation.
+- The detail page performs a named GET instead of deriving its contents from a
+  permitted list response. This preserves Capsule Proxy's distinction between
+  `List` and `Get` and prevents a list-only identity from seeing the rich
+  configuration panels. Conditions and Events remain first.
+- Detail subsections cover feature gates, admission webhooks, configured and
+  reconciled identities, RBAC/controller overrides, and status-reported
+  Tenants. CA bundles are deliberately omitted. Reported Tenant chips link to
+  their canonical rich Tenant pages.
+- `capsuleConfigurationHelpers.ts` normalizes both KubeObject and raw-object
+  inputs and owns health, generation, identity, Tenant, webhook, and aggregate
+  summary logic. Keep its Ready/Reconciling boundary covered by tests.
+
 ## Canonical Capsule custom-resource routes
 
 - `src/resources/capsuleCustomResources.ts` owns the supported Capsule CRD names
@@ -293,10 +394,10 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   the namespace segment.
 - `src/components/common/CapsuleCustomResourceDetail.tsx` is only an adapter. It
   reuses the existing rich list/detail components for Tenant, TenantOwner,
-  CustomQuota, GlobalCustomQuota, GlobalResourceQuota, ResourcePool,
-  TenantResource, and GlobalTenantResource. Do not create a second
-  implementation for CRD routes.
-- Literal list and instance routes for those eight CRDs are registered before
+  CustomQuota, GlobalCustomQuota, GlobalResourceQuota, GlobalProxySettings,
+  CapsuleConfiguration, ResourcePool, TenantResource, and GlobalTenantResource.
+  Do not create a second implementation for CRD routes.
+- Literal list and instance routes for those ten CRDs are registered before
   Headlamp's generic `:crd` routes. Thus the Custom Resources navigation,
   Capsule overview tiles, sidebar leaves, and direct CR instance URLs all use
   the same plugin UI. The older `/capsule/...` list/detail routes remain aliases
@@ -311,10 +412,11 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   remains unchanged.
 - `CapsuleDocumentationAction.tsx` provides the shared header documentation
   action for Tenant, TenantOwner, GlobalResourceQuota, ResourcePool,
-  ResourcePoolClaim, CustomQuota, GlobalCustomQuota, GlobalTenantResource, and
-  TenantResource. The `capsule.documentation-action` header processor inserts it
-  immediately after Headlamp's `EDIT` action and before `DELETE`; do not register
-  it as a plain global header action, which would place it before the defaults.
+  ResourcePoolClaim, CustomQuota, GlobalCustomQuota, GlobalProxySettings,
+  GlobalTenantResource, and TenantResource. The `capsule.documentation-action`
+  header processor inserts it immediately after Headlamp's `EDIT` action and
+  before `DELETE`; do not register it as a plain global header action, which
+  would place it before the defaults.
 - `capsuleDocumentation.ts` owns the kind-to-path mapping and safe URL joining.
   Only absolute HTTP(S) base URLs are accepted; blank, invalid, or unsafe values
   fall back to `https://projectcapsule.dev`. Relative resource paths retain their
@@ -339,19 +441,53 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   restore the standalone `Tenant namespace relationship` heading or the former
   side-by-side layout.
 - The Tenant annotation icon is part of the main `Tenant: <name>` detail title.
+  `components/common/TenantVisualIcon.tsx` renders a valid annotation icon and
+  falls back to the simplified official CNCF Capsule color mark when the
+  annotation is absent, invalid, or its image fails to load. Use it in the
+  Tenant selector, list, detail title, and selected-Tenant tabs. Keep **No
+  Tenant Filter** and multi-Tenant
+  aggregate indicators distinct because they represent scope rather than one
+  Tenant. `CAPSULE_ICONIFY_ICON` exposes the same mark in the icon-data format
+  required by Headlamp's parent **Capsule** sidebar entry. Nested **Tenant** /
+  **Tenants** menu entries intentionally retain their resource-oriented account
+  icons; the Capsule mark is the fallback for each Tenant object, not the
+  submenu category. Artwork source:
+  <https://github.com/cncf/artwork/tree/main/projects/capsule/icon/color>.
   Annotation links render in a dedicated `Links` section only when at least one
   parsed link exists. Unsafe link schemes are rejected as navigation targets by
-  `safeUrl`. Following
-  Conditions and Events, the detail-section order is Quota Usage, Namespaces,
-  then Promoted ServiceAccounts; keep that order when adding Tenant sections.
+  `safeUrl`. Each JSON link entry can carry its own `icon`, independently of the
+  Tenant icon. `normalizeIconRef` accepts native Iconify names, safe image URLs,
+  Font Awesome 6 CSS classes (`fa-solid`, `fa-regular`, `fa-brands`), legacy
+  Font Awesome aliases (`fas`, `far`, `fab`), and a bare `fa-<icon>` defaulting
+  to FA6 solid. This applies to both Tenant and per-link icons across the Tenant
+  selector/list/detail and selected-Tenant context bar. `favicon: true` or
+  `icon: "favicon"` derives `<link-origin>/favicon.ico`; a string-valued
+  `favicon` supplies an explicit URL. `getTenantLinkIcon` owns precedence and
+  safety, while `normalizeTenantLinks` owns the per-entry data contract and
+  drops malformed entries. Following Conditions and Events, the detail-section
+  order is Quota Usage, Namespaces, Persistent Volumes, then Promoted
+  ServiceAccounts; keep that order when adding Tenant sections.
 - `TenantLinksBar.tsx` is registered as the `capsule-tenant-contexts` top-side
   UI panel, not as an app-bar action. It renders a responsive secondary row
   below the app bar: one tab per specifically selected Tenant, in selector
   order, with annotation icons. The active Tenant's annotation links occupy a
-  separate action zone aligned to the far right on desktop and a bordered lower
-  row beneath the tabs on narrow screens. Tenants without valid link targets do
-  not render an empty link zone or `No links configured` filler. An empty
-  selection means **All Tenants** and must render no context row.
+  separate action zone aligned directly after the Tenant tabs on desktop and a
+  bordered, left-aligned lower row beneath the tabs on narrow screens. Its link
+  buttons show the same resolved per-link icon/favicon as Tenant details. Tenant
+  and link icons sit in 36–38px `palette.sidebar.selectedBackground` frames
+  with contrast-aware foregrounds and render at 26–30px so image and Iconify
+  annotations remain legible in dark and light themes. The complete context row
+  and tabs have a 62px minimum height; link buttons have a 48px minimum height.
+  Tenants without valid link targets do not render an empty link zone or `No
+  links configured` filler. An empty selection means **No Tenant Filter** and
+  must render no context row.
+- `TenantBox.tsx` labels an empty selection **No Tenant Filter**, because its
+  cleared Namespace filter can include non-Tenant namespaces; do not call this
+  state All Tenants. Its trigger and selection accents use
+  `palette.sidebar.selectedBackground`, which is Headlamp yellow in the built-in
+  light/dark themes. Per-Tenant avatars have no yellow outline. Status chips use
+  explicit saturated green/yellow/red/blue backgrounds because Headlamp's
+  semantic Chip palette aliases are intentionally very pale.
 - Headlamp 0.44 renders `side: 'top'` UI panels immediately before the AppBar.
   The panel's root therefore assigns the adjacent `.MuiAppBar-root` flex order
   `-1`, which puts the AppBar first and the Tenant context directly below it.
@@ -364,6 +500,20 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   `spec.namespaceOptions.quota` is configured. The chip compares the configured
   limit with status-reported Namespace usage; it is deliberately absent for an
   unlimited Tenant.
+- PersistentVolume ownership is authoritative on PV metadata label
+  `capsule.clastix.io/tenant=<tenant-name>`—not on the PVC's
+  `projectcapsule.dev/tenant` label. Tenant details select matching PVs directly,
+  then resolve their display PVCs through the PV `spec.claimRef` (with PVC
+  `spec.volumeName` as fallback), render a full-width animated Tenant → PVC → PV
+  flow, and keep the searchable/sortable PV table beneath it. A labeled PV stays
+  visible directly beneath the Tenant if its PVC cannot be loaded.
+  The Tenant source node uses the shared blue gradient
+  `linear-gradient(135deg, #1976d2, #0d47a1)` with white text, matching Tenant
+  nodes in the other relationship flows.
+  `persistentVolumeTenant.ts` owns exact label matching, binding resolution,
+  and deterministic ordering; never infer ownership from a claim Namespace.
+  Native PersistentVolume details use the same PV label and load claimRef only
+  to enrich the graph with its intermediate PVC.
 - `Tenant.status.promotions` is authoritative for the `Promoted ServiceAccounts`
   section. `tenantStatusHelpers.ts` parses the Kubernetes identity
   `system:serviceaccount:<namespace>:<name>` and presents links, cluster roles,
@@ -550,18 +700,121 @@ a cluster is available, deploy them and confirm that:
 The deployment commands and file layout above are the maintained hand-off for
 future agents. Update them whenever the environment changes.
 
-## Last verified state (2026-08-14)
+## Last verified state (2026-08-19)
 
-- Helm release `capsule-headlamp` revision 38 is deployed in `capsule-system` on
+- The `capsule` kind cluster was recreated immediately before the latest plugin
+  build. Its API is healthy and its Capsule, cert-manager, and metrics-server
+  Flux HelmReleases are Ready, but it currently has no Headlamp HelmRelease,
+  Deployment, or Pod. Therefore the latest bundle could not be injected or
+  browser-verified; do not report the previous Headlamp workload as live.
+- The locally derived Tenant admission-warning panel, helper, and tests were
+  removed to avoid duplicating Capsule's webhook logic. Formatting, lint,
+  TypeScript, all 174 tests across 37 files, and the production build pass with
+  Node 24. The build transforms 273 modules and emits a 474.51 kB `main.js`
+  (132.69 kB gzip) with SHA-256
+  `289afc4da0c07c1439a09d739270e8f92e0d477277e386a3712ac91f4f4c45bf`.
+- Before the 2026-08-19 recreation, `kind-capsule` was the playground cluster.
+  Headlamp was
+  installed by Flux HelmRelease `flux-system/headlamp` into `capsule-system`
+  with release/deployment name `headlamp`, chart/app version `0.42.0`, and a
+  shared `/build/plugins` EmptyDir mounted by `headlamp` and
+  `headlamp-plugin`. The earlier standalone revision-39 notes below describe the
+  previous incarnation of this kind cluster and are retained as history.
+- The playground's configured Artifact Hub version `0.1.0-beta1` did not resolve
+  through `pluginctl`, leaving the shared plugin directory empty. Running
+  `make headlamp-playground-reload` successfully suspended only
+  `flux-system/headlamp`, built the local bundle, injected it into the existing
+  pod, and restarted only the Headlamp container. The pod remained `2/2 Ready`
+  and the repeat lifecycle check increased only that container's restart count.
+- The live `/plugins` endpoint now lists Capsule as a `development` plugin at
+  `plugins/capsule`. Local, pod, and served `main.js` all have SHA-256
+  `289afc4da0c07c1439a09d739270e8f92e0d477277e386a3712ac91f4f4c45bf`.
+- The deployed Capsule Settings page reports live
+  `CapsuleConfiguration/default` Ready and synchronized at generation `12 / 12`,
+  with 4 managed Tenants, 17 reconciled identities, 11 mutating webhooks, and
+  21 validating webhooks. Authenticated Chromium verified the nested sidebar,
+  canonical list/detail URLs, functional `Edit` menu action, all detail
+  subsections, and links for each reported Tenant.
+- Tenant quick-link annotations now have an explicit normalized per-entry icon
+  contract. `icon` accepts Font Awesome 6 classes such as
+  `fa-solid fa-chart-line`, legacy `fas`/`far`/`fab` classes, native Iconify
+  names, or safe image URLs. Font Awesome classes normalize to the matching
+  Iconify collection, and the same normalization now fixes Tenant icons in the
+  selector and list as well as per-link icons. Detail link icons are 28–30px in
+  44px chips; context-row Tenant/link icons render at 30/26px in 38/36px
+  Headlamp navigation-yellow frames with contrast-aware foregrounds; and the
+  context link group is aligned directly after the Tenant tabs rather than pushed
+  right. The row/tabs are at least 62px high and link buttons are at least 48px
+  high. Favicon references
+  remain supported as a secondary image source. Tests cover Font Awesome forms,
+  mixed icon sources, favicon derivation/precedence/safety, whitespace
+  normalization, and malformed entries; the README and create form contain
+  copyable examples.
+- Tenant selectors use Headlamp's visible navigation accent at
+  `theme.palette.sidebar.selectedBackground`, not `primary.main`: the built-in
+  dark theme sets primary to white but its selected-navigation accent to
+  yellow. The trigger stays filled in No-Tenant-Filter and scoped modes; selected
+  rows, checkboxes, dialog/menu accents, and hover states derive from the same
+  accent. Selector state chips override Headlamp's very pale Chip variants and
+  palette aliases with explicit saturated MUI color scales: green 700 for
+  Active, navigation-accent yellow for Cordoned, red 700 for failed/not-ready,
+  and blue 700 for other states. An authenticated Chromium check against the
+  deployed bundle measured the trigger at `rgb(242, 230, 0)` and Active chips at
+  `rgb(56, 142, 60)`. It also confirmed that the live `wind` Tenant's broken
+  image annotation falls back to the Capsule SVG instead of MUI's Person icon.
+  The parent Capsule sidebar entry uses the Capsule mark through an
+  Iconify-compatible object instead of the previous generic account-group icon.
+- Authenticated Chromium verified `No Tenant Filter` in the cleared selector.
+  On native `solar-test` Namespace details it verified section order through
+  Resource Quotas, LimitRange, Pods, Custom Quotas, Tenant Resources, and
+  Events. Both new owned-resource inventories correctly render an empty table in
+  the current playground because it has no namespaced CustomQuota or
+  TenantResource objects.
+- Tenant details now add a full-width Tenant → PVC → PV XYFlow and a searchable
+  PV inventory sorted by name. Ownership uses the PV label
+  `capsule.clastix.io/tenant`; claimRef supplies the intermediate PVC. Live
+  inspection found exactly three `solar` PVs with that label and their three
+  PVCs carrying the separate `projectcapsule.dev/tenant=solar` label. Resolver
+  and graph tests cover exact PV-label filtering, bound-PVC enrichment,
+  unavailable-claim fallback, wrong-label-domain, and native-detail paths. An
+  authenticated Chromium run confirmed `3 PVC · 3 PV`, three PVC nodes, three
+  PV nodes, six animated edges, and every PV name in both graph and table, with
+  no relevant browser errors. It also measured the Tenant source as the shared
+  blue `rgb(25, 118, 210)` to `rgb(13, 71, 161)` gradient.
+  The same run measured the context bar at 63px and both Tenant/link icon-frame
+  backgrounds at Headlamp yellow `rgb(242, 230, 0)`, with no relevant browser
+  errors.
+- All editable Capsule resource tables now retain Headlamp's standard
+  row-actions dropdown rather than adding a visible Edit column. Authenticated
+  Chromium found no table pencil column, four Tenant row-action menus, and
+  `Edit`, `Download`, and `View YAML` in the opened menu. On the Tenant detail it
+  confirmed six nested Namespace/PV authorization prewarms, Edit in the menu on
+  first open after prewarm, and no relevant runtime errors. Headlamp 0.44 turns
+  a denied Edit action into a second, icon-only ViewButton because it drops the
+  menu button style on that fallback. `CapsuleTableEditAuthorization.css`
+  suppresses only that malformed direct-child icon while retaining the normal
+  `View YAML` MenuItem. A read-only Capsule service-account browser check
+  measured the fallback as `display: none` and left `Download` plus `View YAML`
+  visible; an authorized check still opened the functional YAML editor for a
+  Tenant, ResourcePool, and GlobalTenantResource.
+- The HelmRelease currently reports `Ready=True` and `Released=True`; the
+  Headlamp pod is `2/2 Ready`. There are no Flux
+  Kustomization objects in this playground, so no parent reconciliation is
+  resetting the explicit HelmRelease suspension.
+- The HelmRelease is deliberately left suspended for the active development
+  session. Run `make headlamp-playground-resume` when finished; the injected
+  bundle is ephemeral and disappears on the next pod rollout.
+
+- Helm release `capsule-headlamp` revision 39 is deployed in `capsule-system` on
   context `kind-capsule` with chart/app version `0.44.0`.
 - The official Headlamp GitHub release and Helm repository both report `0.44.0`
   as the latest version. The development chart is already current; do not bump
   it unless a newer chart is confirmed upstream. The current plugin SDK is
   `@kinvolk/headlamp-plugin@0.14.0`.
 - Deployment `capsule-headlamp` is Available. Pod
-  `capsule-headlamp-5bbfd587dc-lvq6d` has both Headlamp and `plugin-sync` Ready.
+  `capsule-headlamp-f6b547db6-9c629` has both Headlamp and `plugin-sync` Ready.
 - The final deployment rebuilt the plugin image, upgraded the release at
-  `2026-08-14T13:49:22+02:00`, and rolled Headlamp onto the durable bundle. The
+  `2026-08-17T10:53:56+02:00`, and rolled Headlamp onto the durable bundle. The
   localhost port-forward was restarted against the new pod.
 - A temporary service-account token listed tenants `green`, `solar`, and `wind`
   through Headlamp's `/clusters/main/apis/capsule.clastix.io/v1beta2/tenants`
@@ -571,9 +824,9 @@ future agents. Update them whenever the environment changes.
   checks return `yes` for wildcard API resources, CRDs, Secrets, and deleting
   cluster-scoped Nodes. The previous Capsule-only editor role/binding was
   removed by Helm.
-- Formatting, lint, TypeScript, all 152 tests across 31 files, and the production
-  build pass with Node 24. The build transforms 257 modules and emits a
-  428.47 kB `main.js` (121.03 kB gzip).
+- Formatting, lint, TypeScript, all 174 tests across 37 files, and the production
+  build pass with Node 24. The build transforms 273 modules and emits a
+  474.51 kB `main.js` (132.69 kB gzip).
 - Native Namespace details now show their linked Tenant in the metadata table,
   Capsule Quota Systems before ResourceQuotas, and an effective one-row-per-
   resource table using the tightest matching hard limit. Live `solar-test`
@@ -618,7 +871,17 @@ future agents. Update them whenever the environment changes.
   states, declaration order, graph placement, and animated edge direction.
 - Headlamp's authenticated proxy returned HTTP 200 for ResourcePools (2),
   TenantOwners (12), CustomQuotas (0), GlobalCustomQuotas (3), TenantResources
-  (0), and GlobalTenantResources (3).
+  (0), GlobalTenantResources (3), and GlobalProxySettings (3).
+- Capsule Proxy v0.13.9 supplies the live GlobalProxySettings CRD and three
+  generated objects: `green-proxy-settings`, `solar-proxy-settings`, and
+  `wind-proxy-settings`. All three reported `Ready=True`, `Succeeded`, and
+  `reconciled`. Authenticated Chromium verified the overview tile (`3 Ready`,
+  `3 Rules · 6 Subjects`), dedicated Proxy sidebar, Name-ascending canonical
+  list, readiness/message columns, and solar's rich detail. The detail showed
+  Conditions beside Events, both status subjects, the
+  `capsule.clastix.io/globalresourcequotas` List grant, and the exact
+  `projectcapsule.dev/tenant=solar` selector. The Proxy docs action was present,
+  and there were no plugin runtime errors.
 - GlobalResourceQuota now has a dedicated sidebar entry, list page, detail page,
   and overview-card route. It was verified against the installed v1beta2 CRD
   and the live `green-shared-compute` object. A reversible authenticated browser
@@ -756,27 +1019,27 @@ future agents. Update them whenever the environment changes.
   to `https://projectcapsule.dev/docs/tenants/`. The Capsule plugin settings page
   showed the default base, then saving `https://docs.example.test/capsule`
   immediately changed the action target to
-  `https://docs.example.test/capsule/docs/tenants/`. Focused tests cover all nine
+  `https://docs.example.test/capsule/docs/tenants/`. Focused tests cover all ten
   kind paths, anchors, unsafe-base fallback, deduplication, and action order.
 - Annotation-driven Tenant links no longer occupy an app-bar action or hover
   `Popper`. Specific selections render a responsive second context row directly
   below the AppBar, with one icon-bearing tab per selected Tenant and only the
   active Tenant's links. Links are right-aligned on desktop and move into their
-  own lower row on narrow screens. **All Tenants** renders no row. Authenticated
+  own lower row on narrow screens. **No Tenant Filter** renders no row. Authenticated
   Chromium verified `green`/`solar` selection order, both annotation icons,
   active-link switching, the desktop right-edge placement, and the 600px layout
   (`tabs y=62..104`, `links y=104..146`). Both final runs had no React/plugin
   runtime errors, and temporary annotations were restored.
 - The final `main.js` SHA-256 is
-  `29305a5cf916e18f82074ef2fc97e1249bae66b60fd867177693439d7e2e28c6` locally,
+  `b5937e360a98035bcbb2d1f0cdad0567b1f1101dcc1ddff13124816b105dab36` locally,
   in the pod, and from the active Headlamp port-forward.
-- Revision 38 rebuilt and loaded plugin image
-  `sha256:59c3bd16887618e2144f2cd83e62b83d800639e82ab01abd0224af4ad86ef527`.
+- Revision 39 rebuilt and loaded plugin image
+  `sha256:9f494af6226008bcd10b3ff69335e641ffaccb944036cbbe9412eada8e81d522`.
   The deployment template records the same bundle checksum in the
   `capsule-headlamp-dev-revision` annotation.
-- The conflict-free `127.0.0.1:8081` forward was restarted after revision 38.
-  The `solar-test` Namespace route returns Headlamp HTML with HTTP 200
-  and the served plugin has the expected checksum;
+- The conflict-free `127.0.0.1:8081` forward was restarted after revision 39.
+  The `solar-proxy-settings` canonical detail route returns Headlamp HTML with
+  HTTP 200 and the served plugin has the expected checksum;
   `::1:8080` belongs to the Capsule controller and correctly explains the
   misleading 404 seen through `localhost:8080`.
 - During the revision 32 rollout, the long-lived kind control plane again became

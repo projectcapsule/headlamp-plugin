@@ -1,3 +1,4 @@
+import { Icon } from '@iconify/react';
 import {
   Avatar,
   Box,
@@ -14,15 +15,18 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { blue, green, red } from '@mui/material/colors';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { Tenants } from '../../resources/tenants';
-import { getTenantIcon, safeUrl } from '../../utils/tenantMeta';
+import { getTenantIcon } from '../../utils/tenantMeta';
+import { TenantVisualIcon } from '../common/TenantVisualIcon';
+import { tenantStateChipColor } from './tenantStatusHelpers';
 
 interface TenantItem {
   metadata?: { name?: string };
@@ -40,11 +44,13 @@ interface TenantItem {
 
 export function TenantBox() {
   const [tenants, error] = Tenants.useList();
-  // Store array of selected tenant names for multi-tenant support. Empty array = All Tenants.
+  // Store selected Tenant names. Empty means no Tenant/Namespace filter is active.
   const [selectedTenantNames, setSelectedTenantNames] = useState<string[]>([]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const theme = useTheme();
+  const tenantAccent = theme.palette.sidebar.selectedBackground;
+  const tenantAccentText = theme.palette.getContrastText(tenantAccent);
   const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
   const { enqueueSnackbar } = useSnackbar();
 
@@ -138,7 +144,7 @@ export function TenantBox() {
           error.message || error
         }. Check that Capsule is installed and you have access.`}
       >
-        <Button variant="outlined" color="inherit" disabled size="small">
+        <Button variant="contained" color="primary" disabled size="small">
           Tenants (error)
         </Button>
       </Tooltip>
@@ -146,7 +152,7 @@ export function TenantBox() {
   }
   if (!tenants) {
     return (
-      <Button variant="outlined" color="inherit" disabled size="small">
+      <Button variant="contained" color="primary" disabled size="small">
         Loading...
       </Button>
     );
@@ -200,18 +206,32 @@ export function TenantBox() {
 
   const currentName =
     selectedTenantNames.length === 0
-      ? 'All Tenants'
+      ? 'No Tenant Filter'
       : selectedTenantNames.length === 1
       ? selectedTenantNames[0]
       : `${selectedTenantNames.length} Tenants`;
 
   const isScoped = selectedTenantNames.length > 0;
+  const selectedTenantIcon =
+    isScoped && selectedTenantNames.length === 1
+      ? getTenantIcon(selectedTenants[0] as any)
+      : undefined;
 
   const renderTenantItem = (tenant: TenantItem, isSelected: boolean) => {
     const name = tenant.metadata?.name || 'Unnamed';
     const ns = tenant.status?.namespaces;
     const nsCount = typeof ns === 'number' ? ns : ns?.length ?? tenant.status?.size ?? 0;
     const state = tenant.status?.state || 'Active';
+    const stateColor = tenantStateChipColor(state);
+    const stateBackground =
+      stateColor === 'success'
+        ? green[700]
+        : stateColor === 'warning'
+        ? tenantAccent
+        : stateColor === 'error'
+        ? red[700]
+        : blue[700];
+    const stateText = theme.palette.getContrastText(stateBackground);
     const icon = getTenantIcon(tenant as any);
     const description =
       tenant.infoDescription ||
@@ -221,25 +241,54 @@ export function TenantBox() {
         key={name}
         onClick={() => handleToggle(tenant)}
         selected={isSelected}
-        sx={{ cursor: 'pointer', borderRadius: 1, my: 0.25 }}
+        sx={{
+          border: '1px solid',
+          borderColor: isSelected ? tenantAccent : 'transparent',
+          borderRadius: 1.5,
+          cursor: 'pointer',
+          my: 0.375,
+          transition: theme.transitions.create(['background-color', 'border-color']),
+          '&:hover': {
+            bgcolor: alpha(tenantAccent, 0.1),
+          },
+          '&.Mui-selected': {
+            bgcolor: alpha(tenantAccent, 0.16),
+          },
+          '&.Mui-selected:hover': {
+            bgcolor: alpha(tenantAccent, 0.22),
+          },
+        }}
       >
         <ListItemIcon sx={{ minWidth: 36 }}>
-          <Checkbox edge="start" checked={isSelected} tabIndex={-1} disableRipple size="small" />
+          <Checkbox
+            checked={isSelected}
+            disableRipple
+            edge="start"
+            size="small"
+            sx={{
+              color: isSelected ? tenantAccent : 'text.secondary',
+              '&.Mui-checked': { color: tenantAccent },
+            }}
+            tabIndex={-1}
+          />
         </ListItemIcon>
         <ListItemAvatar>
           <Avatar
-            src={safeUrl(icon) || undefined}
             sx={{
               width: 28,
               height: 28,
-              fontSize: '0.75rem',
-              bgcolor: icon ? 'transparent' : isSelected ? 'primary.main' : 'action.selected',
+              bgcolor: 'background.paper',
+              border: 0,
             }}
           >
-            {!icon && name.slice(0, 2).toUpperCase()}
+            <TenantVisualIcon icon={icon} size={22} />
           </Avatar>
         </ListItemAvatar>
         <ListItemText
+          primaryTypographyProps={{
+            color: isSelected ? tenantAccent : 'text.primary',
+            fontWeight: isSelected ? 600 : 500,
+          }}
           primary={name}
           secondary={
             <Box component="span" sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
@@ -247,8 +296,16 @@ export function TenantBox() {
                 <Chip
                   size="small"
                   label={state}
-                  color={state === 'Active' ? 'success' : 'default'}
-                  sx={{ height: 16, fontSize: '0.6rem' }}
+                  color={stateColor}
+                  variant="filled"
+                  sx={{
+                    bgcolor: `${stateBackground} !important`,
+                    color: `${stateText} !important`,
+                    height: 20,
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    '& .MuiChip-label': { color: 'inherit' },
+                  }}
                 />
                 <Typography variant="caption" color="text.secondary">
                   {nsCount} namespace{nsCount === 1 ? '' : 's'}
@@ -267,11 +324,19 @@ export function TenantBox() {
   };
 
   const content = (
-    <List sx={{ py: 0.5, minWidth: 220 }} dense>
+    <List sx={{ minWidth: 260, px: 0.75, py: 0.75 }} dense>
       <ListItem
         onClick={handleClear}
         selected={!isScoped}
-        sx={{ cursor: 'pointer', borderRadius: 1 }}
+        sx={{
+          border: '1px solid',
+          borderColor: !isScoped ? tenantAccent : 'transparent',
+          borderRadius: 1.5,
+          cursor: 'pointer',
+          '&:hover': { bgcolor: alpha(tenantAccent, 0.1) },
+          '&.Mui-selected': { bgcolor: alpha(tenantAccent, 0.16) },
+          '&.Mui-selected:hover': { bgcolor: alpha(tenantAccent, 0.22) },
+        }}
       >
         <ListItemAvatar>
           <Avatar
@@ -279,13 +344,21 @@ export function TenantBox() {
               width: 28,
               height: 28,
               fontSize: '0.7rem',
-              bgcolor: 'text.disabled',
+              bgcolor: !isScoped ? tenantAccent : alpha(tenantAccent, 0.12),
+              color: !isScoped ? tenantAccentText : tenantAccent,
             }}
           >
-            ALL
+            <Icon icon="mdi:filter-off-outline" width={18} height={18} />
           </Avatar>
         </ListItemAvatar>
-        <ListItemText primary="All Tenants" secondary="Show resources across all namespaces" />
+        <ListItemText
+          primary="No Tenant Filter"
+          primaryTypographyProps={{
+            color: !isScoped ? tenantAccent : 'text.primary',
+            fontWeight: !isScoped ? 600 : 500,
+          }}
+          secondary="Show resources from every namespace"
+        />
       </ListItem>
       <Divider sx={{ my: 0.5 }} />
       {tenants.length === 0 && (
@@ -308,45 +381,49 @@ export function TenantBox() {
         title={
           isScoped
             ? `Scoped to ${selectedTenantNames.length} tenant(s): ${selectedTenantNames.join(', ')}`
-            : 'No tenant scope (all namespaces)'
+            : 'No Tenant filter: showing every namespace'
         }
       >
         <Button
-          variant={isScoped ? 'contained' : 'outlined'}
-          color={isScoped ? 'primary' : 'inherit'}
+          variant="contained"
+          color="primary"
           size="small"
           onClick={handleClick}
           startIcon={
             <Avatar
-              src={
-                isScoped && selectedTenantNames.length === 1
-                  ? safeUrl(getTenantIcon(selectedTenants[0] as any))
-                  : undefined
-              }
               sx={{
                 width: 18,
                 height: 18,
                 fontSize: '0.65rem',
-                bgcolor: isScoped ? 'primary.contrastText' : 'action.active',
-                color: isScoped ? 'primary.main' : 'inherit',
+                bgcolor: alpha(tenantAccentText, 0.12),
+                color: tenantAccentText,
               }}
             >
-              {(!isScoped ||
-                selectedTenantNames.length > 1 ||
-                !getTenantIcon(selectedTenants[0] as any)) &&
-                (isScoped
-                  ? selectedTenantNames.length > 1
-                    ? String(selectedTenantNames.length)
-                    : currentName.slice(0, 1).toUpperCase()
-                  : '∀')}
+              {isScoped && selectedTenantNames.length === 1 ? (
+                <TenantVisualIcon icon={selectedTenantIcon} size={16} />
+              ) : isScoped && selectedTenantNames.length > 1 ? (
+                String(selectedTenantNames.length)
+              ) : (
+                '∀'
+              )}
             </Avatar>
           }
           sx={{
             textTransform: 'none',
             maxWidth: 200,
-            fontWeight: 500,
+            fontWeight: 600,
+            bgcolor: `${tenantAccent} !important`,
+            color: `${tenantAccentText} !important`,
+            borderColor: `${tenantAccent} !important`,
+            boxShadow: 'none',
+            '&:hover': {
+              borderColor: `${tenantAccent} !important`,
+              bgcolor: `${alpha(tenantAccent, 0.82)} !important`,
+              boxShadow: 'none',
+            },
             '& .MuiButton-startIcon': { mr: 0.75 },
           }}
+          endIcon={<Icon icon="mdi:chevron-down" width={18} height={18} />}
         >
           <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {currentName}
@@ -359,7 +436,8 @@ export function TenantBox() {
                 ml: 0.75,
                 height: 16,
                 fontSize: '0.55rem',
-                bgcolor: 'rgba(255,255,255,0.2)',
+                bgcolor: alpha(tenantAccentText, 0.14),
+                color: tenantAccentText,
               }}
             />
           )}
@@ -371,12 +449,42 @@ export function TenantBox() {
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        PaperProps={{ sx: { mt: 0.5 } }}
+        PaperProps={{
+          sx: {
+            border: '1px solid',
+            borderColor: alpha(tenantAccent, 0.55),
+            borderRadius: 2,
+            boxShadow: theme.shadows[8],
+            mt: 0.75,
+          },
+        }}
       >
         {content}
       </Menu>
-      <Dialog open={openDialog} onClose={handleClose} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ pb: 1 }}>Select Tenant Scope</DialogTitle>
+      <Dialog
+        open={openDialog}
+        onClose={handleClose}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            border: '1px solid',
+            borderColor: alpha(tenantAccent, 0.55),
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            borderBottom: '1px solid',
+            borderColor: alpha(tenantAccent, 0.45),
+            color: tenantAccent,
+            fontWeight: 600,
+            pb: 1,
+          }}
+        >
+          Select Tenant Scope
+        </DialogTitle>
         {content}
       </Dialog>
     </>

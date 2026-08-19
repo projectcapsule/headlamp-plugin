@@ -4,6 +4,7 @@ import {
   registerDetailsViewHeaderActionsProcessor,
   registerDetailsViewSectionsProcessor,
   registerPluginSettings,
+  registerResourceTableColumnsProcessor,
   registerRoute,
   registerSidebarEntry,
   registerUIPanel,
@@ -19,6 +20,8 @@ import {
   insertDocumentationAction,
 } from './components/common/capsuleDocumentation';
 import { CapsuleDocumentationAction } from './components/common/CapsuleDocumentationAction';
+import { CAPSULE_ICONIFY_ICON } from './components/common/CapsuleIcon';
+import { prewarmCapsuleTableEditAuthorization } from './components/common/CapsuleTableEditAuthorization';
 import {
   GlobalTenantResourceCordonAction,
   GlobalTenantResourceReconcileAction,
@@ -27,9 +30,13 @@ import {
   TenantResourceCordonAction,
   TenantResourceReconcileAction,
 } from './components/common/ReconcileActions';
+import { CapsuleConfigurationDetail } from './components/configuration/CapsuleConfigurationDetail';
+import { CapsuleConfigurationList } from './components/configuration/CapsuleConfigurationList';
 import { CapsuleMap } from './components/map/CapsuleMap';
 import { processNamespaceDetailsSections } from './components/namespaces/NamespaceDetailsIntegration';
 import { CapsuleOverview } from './components/overview/CapsuleOverview';
+import { GlobalProxySettingsDetail } from './components/proxy/GlobalProxySettingsDetail';
+import { GlobalProxySettingsList } from './components/proxy/GlobalProxySettingsList';
 import CreateCustomQuotaForm from './components/quotas/CreateCustomQuotaForm';
 import CreateGlobalCustomQuotaForm from './components/quotas/CreateGlobalCustomQuotaForm';
 import { CustomQuotaDetail } from './components/quotas/CustomQuotaDetail';
@@ -42,6 +49,7 @@ import { ResourcePoolClaimDetail } from './components/quotas/ResourcePoolClaimDe
 import { ResourcePoolDetail } from './components/quotas/ResourcePoolDetail';
 import { ResourcePoolsList } from './components/quotas/ResourcePoolList';
 import { CapsuleSettings } from './components/settings/CapsuleSettings';
+import { processPersistentVolumeDetailsSections } from './components/storage/PersistentVolumeTenantIntegration';
 import { TenantOwnerDetail } from './components/tenant-owners/TenantOwnerDetail';
 import { TenantOwnersList } from './components/tenant-owners/TenantOwnerList';
 import CreateGlobalTenantResourceForm from './components/tenant-resources/CreateGlobalTenantResourceForm';
@@ -56,12 +64,14 @@ import { TenantBox } from './components/tenants/TenantBox';
 import { TenantDetail } from './components/tenants/TenantDetail';
 import { TenantLinksBar } from './components/tenants/TenantLinksBar';
 import { TenantsList } from './components/tenants/TenantList';
+import { CapsuleConfiguration } from './resources/capsuleConfigurations';
 import {
   CAPSULE_CRDS,
   capsuleCustomResourceDetailPath,
   capsuleCustomResourceListPath,
 } from './resources/capsuleCustomResources';
 import { CustomQuota, GlobalCustomQuota } from './resources/customQuotas';
+import { GlobalProxySettings } from './resources/globalProxySettings';
 import { GlobalResourceQuota } from './resources/globalResourceQuotas';
 import { ResourcePool, ResourcePoolClaim } from './resources/resourcePools';
 import { TenantOwner } from './resources/tenantOwners';
@@ -75,6 +85,7 @@ registerUIPanel({
   component: () => <TenantLinksBar />,
 });
 registerPluginSettings('capsule', CapsuleSettings, true);
+registerResourceTableColumnsProcessor(prewarmCapsuleTableEditAuthorization);
 
 // Make the plugin's rich detail pages canonical for Capsule CR instances opened
 // from Headlamp's Custom Resources lists, search results, or direct URLs. These
@@ -85,6 +96,11 @@ const capsuleCustomResourceDetails: Array<{
   kind: CapsuleCustomResourceDetailKind;
   sidebar: string;
 }> = [
+  {
+    crd: CAPSULE_CRDS.CapsuleConfiguration,
+    kind: 'CapsuleConfiguration',
+    sidebar: 'capsule-configurations',
+  },
   { crd: CAPSULE_CRDS.Tenant, kind: 'Tenant', sidebar: 'tenants' },
   { crd: CAPSULE_CRDS.TenantOwner, kind: 'TenantOwner', sidebar: 'tenant-owners' },
   { crd: CAPSULE_CRDS.CustomQuota, kind: 'CustomQuota', sidebar: 'custom-quotas' },
@@ -97,6 +113,11 @@ const capsuleCustomResourceDetails: Array<{
     crd: CAPSULE_CRDS.GlobalResourceQuota,
     kind: 'GlobalResourceQuota',
     sidebar: 'global-resource-quotas',
+  },
+  {
+    crd: CAPSULE_CRDS.GlobalProxySettings,
+    kind: 'GlobalProxySettings',
+    sidebar: 'global-proxy-settings',
   },
   { crd: CAPSULE_CRDS.ResourcePool, kind: 'ResourcePool', sidebar: 'resource-pools' },
   {
@@ -152,7 +173,7 @@ registerSidebarEntry({
   parent: '',
   name: 'capsule',
   label: 'Capsule',
-  icon: 'mdi:account-group',
+  icon: CAPSULE_ICONIFY_ICON,
   url: '/capsule/overview/',
 });
 
@@ -250,6 +271,38 @@ registerSidebarEntry({
   label: 'Tenant Resources',
   icon: 'mdi:file-document',
   url: capsuleCustomResourceListPath(CAPSULE_CRDS.TenantResource),
+});
+
+registerSidebarEntry({
+  parent: 'capsule',
+  name: 'capsule-proxy-section',
+  label: 'Proxy',
+  icon: 'mdi:server-network',
+  url: capsuleCustomResourceListPath(CAPSULE_CRDS.GlobalProxySettings),
+});
+
+registerSidebarEntry({
+  parent: 'capsule-proxy-section',
+  name: 'global-proxy-settings',
+  label: 'Global Proxy Settings',
+  icon: 'mdi:shield-search',
+  url: capsuleCustomResourceListPath(CAPSULE_CRDS.GlobalProxySettings),
+});
+
+registerSidebarEntry({
+  parent: 'capsule',
+  name: 'capsule-settings-section',
+  label: 'Settings',
+  icon: 'mdi:cog-outline',
+  url: capsuleCustomResourceListPath(CAPSULE_CRDS.CapsuleConfiguration),
+});
+
+registerSidebarEntry({
+  parent: 'capsule-settings-section',
+  name: 'capsule-configurations',
+  label: 'Capsule Configuration',
+  icon: 'mdi:tune-variant',
+  url: capsuleCustomResourceListPath(CAPSULE_CRDS.CapsuleConfiguration),
 });
 
 registerRoute({
@@ -398,6 +451,38 @@ registerRoute({
   exact: true,
 });
 
+registerRoute({
+  path: '/capsule/global-proxy-settings/',
+  sidebar: 'global-proxy-settings',
+  name: 'globalproxysettings',
+  component: () => <GlobalProxySettingsList />,
+  exact: true,
+});
+
+registerRoute({
+  path: '/capsule/global-proxy-settings/:name',
+  sidebar: 'global-proxy-settings',
+  name: 'globalproxysetting',
+  component: () => <GlobalProxySettingsDetail />,
+  exact: true,
+});
+
+registerRoute({
+  path: '/capsule/settings/',
+  sidebar: 'capsule-configurations',
+  name: 'capsuleconfigurations',
+  component: () => <CapsuleConfigurationList />,
+  exact: true,
+});
+
+registerRoute({
+  path: '/capsule/settings/:name',
+  sidebar: 'capsule-configurations',
+  name: 'capsuleconfiguration',
+  component: () => <CapsuleConfigurationDetail />,
+  exact: true,
+});
+
 registerDetailsViewHeaderAction(NamespaceCordonAction);
 registerDetailsViewHeaderAction(ServiceAccountPromotionAction);
 
@@ -415,6 +500,11 @@ registerDetailsViewSectionsProcessor({
   processor: processNamespaceDetailsSections,
 });
 
+registerDetailsViewSectionsProcessor({
+  id: 'capsule.persistentvolume-tenant-details',
+  processor: processPersistentVolumeDetailsSections,
+});
+
 registerDetailsViewHeaderAction(TenantCordonAction);
 registerDetailsViewHeaderAction(TenantResourceCordonAction);
 registerDetailsViewHeaderAction(TenantResourceReconcileAction);
@@ -424,6 +514,9 @@ registerDetailsViewHeaderAction(GlobalTenantResourceReconcileAction);
 (RESOURCE_DEFINITIONS as any).Tenant = {
   class: Tenants,
   form: CreateTenantForm,
+};
+(RESOURCE_DEFINITIONS as any).CapsuleConfiguration = {
+  class: CapsuleConfiguration,
 };
 (RESOURCE_DEFINITIONS as any).TenantOwner = {
   class: TenantOwner,
@@ -438,6 +531,9 @@ registerDetailsViewHeaderAction(GlobalTenantResourceReconcileAction);
 };
 (RESOURCE_DEFINITIONS as any).GlobalResourceQuota = {
   class: GlobalResourceQuota,
+};
+(RESOURCE_DEFINITIONS as any).GlobalProxySettings = {
+  class: GlobalProxySettings,
 };
 (RESOURCE_DEFINITIONS as any).ResourcePool = {
   class: ResourcePool,

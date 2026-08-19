@@ -71,12 +71,12 @@ anchor are appended to the configured base URL.
 
 You can enrich how Tenants appear in the plugin by adding annotations to your `Tenant` resources.
 
-| Annotation                            | Purpose                                      | Example Value                                   |
-| ------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
-| `info.projectcapsule.dev/icon`        | Avatar/icon for the tenant                   | `https://example.com/my-tenant-icon.png`        |
-| `info.projectcapsule.dev/description` | Short description shown in lists and chooser | `Production tenant for the payments team`       |
-| `info.projectcapsule.dev/links`       | JSON array of quick links                    | `'[{"title":"Dashboard","url":"https://..."}]'` |
-| `info.projectcapsule.dev/banner`      | Banner image at the top of the tenant detail | `https://example.com/tenant-banner.jpg`         |
+| Annotation                            | Purpose                                      | Example Value                                                                   |
+| ------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------- |
+| `info.projectcapsule.dev/icon`        | Avatar/icon for the tenant                   | `https://example.com/my-tenant-icon.png`                                        |
+| `info.projectcapsule.dev/description` | Short description shown in lists and chooser | `Production tenant for the payments team`                                       |
+| `info.projectcapsule.dev/links`       | JSON links with per-link icons               | `'[{"title":"Dashboard","url":"https://...","icon":"fa-solid fa-chart-line"}]'` |
+| `info.projectcapsule.dev/banner`      | Banner image at the top of the tenant detail | `https://example.com/tenant-banner.jpg`                                         |
 
 **Example:**
 
@@ -88,7 +88,7 @@ metadata:
   annotations:
     info.projectcapsule.dev/icon: https://example.com/payments-icon.png
     info.projectcapsule.dev/description: Production tenant for the payments team
-    info.projectcapsule.dev/links: '[{"title":"Grafana","url":"https://grafana.example.com/d/payments"},{"title":"Runbook","url":"https://wiki.example.com/payments-runbook"}]'
+    info.projectcapsule.dev/links: '[{"title":"Grafana","url":"https://grafana.example.com/d/payments","icon":"fa-solid fa-chart-line"},{"title":"Runbook","url":"https://wiki.example.com/payments-runbook","icon":"fa-regular fa-file-lines"}]'
     info.projectcapsule.dev/banner: https://example.com/payments-banner.jpg
 spec:
   owners:
@@ -97,12 +97,26 @@ spec:
 ```
 
 These annotations are used in the tenant chooser, tenant lists, tenant details, and the Capsule overview.
+When `info.projectcapsule.dev/icon` is absent, Tenant surfaces use the official
+[CNCF Capsule color icon](https://github.com/cncf/artwork/tree/main/projects/capsule/icon/color)
+instead of generated initials.
 When one or more specific Tenants are selected, Headlamp also shows a secondary
 context-tab row below the app bar. Each selected Tenant gets a tab (including
 its configured icon), and the active tab exposes that Tenant's quick links. The
-row is hidden for the unscoped **All Tenants** selection.
+row is hidden when **No Tenant Filter** is selected. This empty selection clears
+the global Namespace filter, so non-Tenant namespaces may also be visible; it
+does not mean “all Tenants.”
 
-> **Note:** The `links` annotation must be a valid JSON array of objects containing at least `title` and `url`.
+> **Note:** The `links` annotation must be a valid JSON array of objects
+> containing at least `title` and `url`. Every object may define its own `icon`
+> as Font Awesome CSS classes (`fa-solid fa-chart-line`, `fas fa-chart-line`,
+> `far fa-file`, or `fab fa-github`), an Iconify name such as
+> `fa6-solid:chart-line`/`mdi:grafana`, or an HTTP(S)/relative image URL. The
+> Tenant-level `info.projectcapsule.dev/icon` annotation accepts the same forms.
+> Set `favicon: true` (or `icon: "favicon"`) to derive
+> `<link-origin>/favicon.ico`, or provide an explicit favicon URL as the
+> `favicon` value. The icon appears with that link in Tenant lists, details, and
+> the selected Tenant context bar.
 
 ## TenantResources & GlobalTenantResources
 
@@ -122,6 +136,20 @@ The plugin provides rich support for Capsule's replication resources:
 The repository includes a repeatable environment that deploys Headlamp and the
 locally built plugin into Kubernetes. It is optimized for kind and uses the
 current kube context by default.
+
+If the Capsule playground has already installed Headlamp through Flux, reload
+the local bundle into that installation directly:
+
+```bash
+make headlamp-playground-reload
+make headlamp-playground-status
+```
+
+This suspends only the Headlamp HelmRelease, injects the bundle into its shared
+plugin volume, and restarts only the Headlamp container. Return ownership to
+Flux afterward with `make headlamp-playground-resume`. See
+[`deploy/headlamp/README.md`](deploy/headlamp/README.md) for lifecycle details
+and overrides.
 
 Prerequisites:
 

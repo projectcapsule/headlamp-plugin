@@ -68,6 +68,7 @@ export function CustomQuotasList() {
       </SummaryCardGrid>
 
       <ResourceListView
+        id="capsule-custom-quotas"
         title="Custom Quotas"
         resourceClass={CustomQuota}
         columns={[

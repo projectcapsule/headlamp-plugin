@@ -6,7 +6,10 @@
 	headlamp-token \
 	headlamp-port-forward \
 	headlamp-logs \
-	headlamp-undeploy
+	headlamp-undeploy \
+	headlamp-playground-reload \
+	headlamp-playground-status \
+	headlamp-playground-resume
 
 headlamp-deploy:
 	./hack/headlamp-dev.sh deploy
@@ -32,3 +35,11 @@ headlamp-logs:
 headlamp-undeploy:
 	./hack/headlamp-dev.sh undeploy
 
+headlamp-playground-reload:
+	./hack/headlamp-playground.sh reload
+
+headlamp-playground-status:
+	./hack/headlamp-playground.sh status
+
+headlamp-playground-resume:
+	./hack/headlamp-playground.sh resume

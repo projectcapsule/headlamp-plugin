@@ -1,25 +1,64 @@
 import { Icon } from '@iconify/react';
-import { Avatar, Box, Button, Divider, Tab, Tabs } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { alpha, Avatar, Box, Button, Divider, Tab, Tabs } from '@mui/material';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Tenants } from '../../resources/tenants';
-import { isImageRef, safeUrl } from '../../utils/tenantMeta';
+import {
+  getTenantLinkIcon,
+  isIconifyRef,
+  isImageRef,
+  normalizeIconRef,
+  safeUrl,
+} from '../../utils/tenantMeta';
+import { TenantVisualIcon } from '../common/TenantVisualIcon';
 import {
   getSelectedTenantContexts,
   readSelectedTenantNames,
   type TenantContextData,
 } from './tenantContext';
 
-const ICONIFY_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$/i;
+function ContrastIconFrame({ children, size = 38 }: { children: ReactNode; size?: number }) {
+  return (
+    <Box
+      component="span"
+      sx={theme => {
+        const accent = theme.palette.sidebar.selectedBackground;
+        const accentText = theme.palette.getContrastText(accent);
+        return {
+          alignItems: 'center',
+          bgcolor: accent,
+          border: '1px solid',
+          borderColor: alpha(accentText, 0.32),
+          borderRadius: 1,
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.22)',
+          color: accentText,
+          display: 'inline-flex',
+          flex: `0 0 ${size}px`,
+          height: size,
+          justifyContent: 'center',
+          width: size,
+        };
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
 
 function AnnotationIcon({ value, size }: { value?: string; size: number }) {
-  if (!value) return null;
-  if (isImageRef(value)) {
+  const normalized = normalizeIconRef(value);
+  if (!normalized) return null;
+  if (isImageRef(normalized)) {
     return (
-      <Avatar alt="" src={safeUrl(value)} variant="rounded" sx={{ height: size, width: size }} />
+      <Avatar
+        alt=""
+        src={safeUrl(normalized)}
+        variant="rounded"
+        sx={{ height: size, width: size }}
+      />
     );
   }
-  if (ICONIFY_NAME.test(value)) {
-    return <Icon aria-hidden icon={value} style={{ fontSize: size }} />;
+  if (isIconifyRef(normalized)) {
+    return <Icon aria-hidden icon={normalized} style={{ fontSize: size }} />;
   }
   return null;
 }
@@ -27,7 +66,16 @@ function AnnotationIcon({ value, size }: { value?: string; size: number }) {
 function TenantLinks({ tenant }: { tenant: TenantContextData }) {
   const links = tenant.links.flatMap((link, index) => {
     const href = safeUrl(link.url);
-    return href ? [{ ...link, href, key: `${link.title || href}-${index}` }] : [];
+    return href
+      ? [
+          {
+            ...link,
+            href,
+            iconRef: getTenantLinkIcon(link),
+            key: `${link.title || href}-${index}`,
+          },
+        ]
+      : [];
   });
 
   if (links.length === 0) return null;
@@ -41,7 +89,7 @@ function TenantLinks({ tenant }: { tenant: TenantContextData }) {
         borderTop: { xs: '1px solid', md: 0 },
         display: 'flex',
         flex: { xs: '0 0 auto', md: '1 1 auto' },
-        minHeight: 42,
+        minHeight: 62,
         minWidth: 0,
         overflowX: 'auto',
         px: { xs: 1, md: 1.5 },
@@ -54,7 +102,7 @@ function TenantLinks({ tenant }: { tenant: TenantContextData }) {
           alignItems: 'center',
           display: 'flex',
           gap: 0.5,
-          marginLeft: 'auto',
+          marginLeft: 0,
           minWidth: 'max-content',
         }}
       >
@@ -67,15 +115,17 @@ function TenantLinks({ tenant }: { tenant: TenantContextData }) {
             rel="noopener noreferrer"
             size="small"
             startIcon={
-              link.icon ? (
-                <AnnotationIcon size={18} value={link.icon} />
-              ) : (
-                <Icon aria-hidden icon="mdi:open-in-new" />
-              )
+              <ContrastIconFrame size={36}>
+                {link.iconRef ? (
+                  <AnnotationIcon size={26} value={link.iconRef} />
+                ) : (
+                  <Icon aria-hidden icon="mdi:open-in-new" width={25} height={25} />
+                )}
+              </ContrastIconFrame>
             }
             sx={{
               flexShrink: 0,
-              minHeight: 30,
+              minHeight: 48,
               textTransform: 'none',
               whiteSpace: 'nowrap',
             }}
@@ -92,7 +142,7 @@ function TenantLinks({ tenant }: { tenant: TenantContextData }) {
 
 /**
  * A secondary context row below Headlamp's app bar. The empty selection means
- * "All Tenants" and intentionally renders nothing. Specific selections become
+ * "No Tenant Filter" and intentionally renders nothing. Specific selections become
  * tabs, with the active Tenant's annotation-driven links alongside them.
  */
 export function TenantLinksBar() {
@@ -139,7 +189,7 @@ export function TenantLinksBar() {
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
         flexShrink: 0,
-        minHeight: 42,
+        minHeight: 62,
         width: '100%',
       }}
     >
@@ -149,7 +199,7 @@ export function TenantLinksBar() {
         scrollButtons="auto"
         sx={{
           flexShrink: 0,
-          minHeight: 42,
+          minHeight: 62,
           maxWidth: { xs: '100%', md: '52%' },
           '& .MuiTabs-indicator': { height: 3 },
         }}
@@ -158,13 +208,17 @@ export function TenantLinksBar() {
       >
         {selectedTenants.map(tenant => (
           <Tab
-            icon={tenant.icon ? <AnnotationIcon size={20} value={tenant.icon} /> : undefined}
+            icon={
+              <ContrastIconFrame>
+                <TenantVisualIcon icon={tenant.icon} size={30} />
+              </ContrastIconFrame>
+            }
             iconPosition="start"
             key={tenant.name}
             label={tenant.name}
             sx={{
               gap: 0.75,
-              minHeight: 42,
+              minHeight: 62,
               minWidth: 0,
               px: 1.5,
               py: 0.5,

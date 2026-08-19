@@ -1,8 +1,12 @@
 import { getTenantSpaceNames } from '../../utils/tenantSpaces';
 
 export const CAPSULE_NAMESPACE_QUOTA_SECTION_ID = 'capsule.namespace-quota-systems';
+export const CAPSULE_NAMESPACE_CUSTOM_QUOTAS_SECTION_ID = 'capsule.namespace-owned-customquotas';
+export const CAPSULE_NAMESPACE_TENANT_RESOURCES_SECTION_ID =
+  'capsule.namespace-owned-tenantresources';
 export const HEADLAMP_NAMESPACE_RESOURCE_QUOTAS_SECTION_ID =
   'headlamp.namespace-owned-resourcequotas';
+export const HEADLAMP_NAMESPACE_DETAILS_VIEW_SECTION_ID = 'headlamp.namespace-details-view';
 
 function objectData(item: any) {
   return item?.jsonData || item || {};

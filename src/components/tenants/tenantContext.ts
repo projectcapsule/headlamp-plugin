@@ -14,8 +14,8 @@ export interface TenantContextData {
 
 /**
  * Parses both the current multi-select value and the legacy single-Tenant
- * values. An empty result deliberately means Headlamp is scoped to all
- * Tenants, in which case the contextual panel must stay hidden.
+ * values. An empty result deliberately means no Tenant filter is active, in
+ * which case the contextual panel must stay hidden.
  */
 export function parseStoredTenantSelection(saved: string | null | undefined): string[] {
   if (!saved) return [];

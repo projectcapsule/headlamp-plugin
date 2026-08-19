@@ -9,6 +9,44 @@ the repository's `Dockerfile`. After deployment, `make headlamp-sync` rebuilds
 the bundle and copies it through the `plugin-sync` sidecar. Headlamp watches the
 shared plugin directory and reloads changed bundles.
 
+## Reload an existing Flux playground installation
+
+When the playground already installed Headlamp through a Flux `HelmRelease`, do
+not run `make headlamp-deploy`: that target owns a separate Helm release. Use
+the playground reload target instead:
+
+```sh
+make headlamp-playground-reload
+```
+
+The target discovers `flux-system/headlamp` and its target namespace, builds
+the local bundle, suspends that HelmRelease, copies the plugin through the
+chart's `headlamp-plugin` sidecar into the existing `/build/plugins` EmptyDir,
+and restarts only the Headlamp server container. The pod is not replaced, so
+the injected files survive the reload. Check the release, pod, and local/remote
+bundle hashes with:
+
+```sh
+make headlamp-playground-status
+```
+
+After the development session, hand control back to Flux:
+
+```sh
+make headlamp-playground-resume
+```
+
+The injection is intentionally ephemeral. Resuming reconciliation leaves the
+current files in place, but the next Helm rollout recreates the EmptyDir and
+restores whatever plugin is configured in the playground Git source.
+
+The playground script uses the current kube context by default. It supports
+`KUBE_CONTEXT`, `FLUX_NAMESPACE`, `HEADLAMP_HELMRELEASE`,
+`HEADLAMP_NAMESPACE`, `HEADLAMP_DEPLOYMENT`, `HEADLAMP_CONTAINER`,
+`HEADLAMP_PLUGIN_CONTAINER`, `HEADLAMP_PLUGINS_DIR`, `PLUGIN_NAME`, and
+`NODE_BIN` overrides. The installation must expose a writable shared plugin
+volume through a sidecar; the playground chart's plugins manager provides it.
+
 ## Deploy to kind
 
 Prerequisites are npm 11+, Docker, kind, kubectl, Helm, and an existing kind

@@ -7,8 +7,12 @@ import React, { Children, cloneElement, isValidElement } from 'react';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { Tenants } from '../../resources/tenants';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
+import { NamespaceCustomQuotas, NamespaceTenantResources } from './NamespaceCapsuleResources';
 import {
+  CAPSULE_NAMESPACE_CUSTOM_QUOTAS_SECTION_ID,
   CAPSULE_NAMESPACE_QUOTA_SECTION_ID,
+  CAPSULE_NAMESPACE_TENANT_RESOURCES_SECTION_ID,
+  HEADLAMP_NAMESPACE_DETAILS_VIEW_SECTION_ID,
   HEADLAMP_NAMESPACE_RESOURCE_QUOTAS_SECTION_ID,
   insertDetailsSectionBefore,
   tenantNameForNamespace,
@@ -80,12 +84,28 @@ function addTenantToMetadata(resource: any, sections: any[]): any[] {
 export function processNamespaceDetailsSections(resource: any, sections: any[]) {
   if (objectKind(resource) !== 'Namespace') return sections;
   const withTenant = addTenantToMetadata(resource, sections);
-  return insertDetailsSectionBefore(
+  const withQuotaSystems = insertDetailsSectionBefore(
     withTenant,
     {
       id: CAPSULE_NAMESPACE_QUOTA_SECTION_ID,
       section: <NamespaceQuotaSystems namespace={resource} />,
     },
     HEADLAMP_NAMESPACE_RESOURCE_QUOTAS_SECTION_ID
+  );
+  const withCustomQuotas = insertDetailsSectionBefore(
+    withQuotaSystems,
+    {
+      id: CAPSULE_NAMESPACE_CUSTOM_QUOTAS_SECTION_ID,
+      section: <NamespaceCustomQuotas namespace={resource} />,
+    },
+    HEADLAMP_NAMESPACE_DETAILS_VIEW_SECTION_ID
+  );
+  return insertDetailsSectionBefore(
+    withCustomQuotas,
+    {
+      id: CAPSULE_NAMESPACE_TENANT_RESOURCES_SECTION_ID,
+      section: <NamespaceTenantResources namespace={resource} />,
+    },
+    HEADLAMP_NAMESPACE_DETAILS_VIEW_SECTION_ID
   );
 }

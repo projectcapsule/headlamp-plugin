@@ -38,5 +38,11 @@ describe('Capsule custom resource routes', () => {
     expect(capsuleCustomResourceListPath(CAPSULE_CRDS.ResourcePool)).toBe(
       '/customresources/resourcepools.capsule.clastix.io'
     );
+    expect(capsuleCustomResourceListPath(CAPSULE_CRDS.GlobalProxySettings)).toBe(
+      '/customresources/globalproxysettings.capsule.clastix.io'
+    );
+    expect(capsuleCustomResourceListPath(CAPSULE_CRDS.CapsuleConfiguration)).toBe(
+      '/customresources/capsuleconfigurations.capsule.clastix.io'
+    );
   });
 });

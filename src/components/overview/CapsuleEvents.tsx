@@ -14,6 +14,8 @@ const resourceRoutes: Record<string, { routeName: string; namespaced: boolean }>
 };
 
 const capsuleResourcePlurals: Record<string, string> = {
+  CapsuleConfiguration: 'capsuleconfigurations',
+  GlobalProxySettings: 'globalproxysettings',
   GlobalResourceQuota: 'globalresourcequotas',
   ResourcePool: 'resourcepools',
   TenantOwner: 'tenantowners',
