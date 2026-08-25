@@ -1,4 +1,4 @@
-import { SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Typography } from '@mui/material';
 import { useParams } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { ResourcePoolClaimFlow } from './ResourcePoolClaimFlow';
 
 export interface ResourcePoolClaimDetailProps {

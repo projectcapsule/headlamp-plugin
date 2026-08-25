@@ -200,6 +200,11 @@ replace it with API- and verb-scoped roles there.
 - `src/components/common/DetailsSectionStack.tsx` is the single-child wrapper
   used inside `DetailsGrid`. It groups multiple Capsule subsections while
   preserving Headlamp's metadata/events grid alignment.
+- `src/components/common/AnchoredSectionBox.tsx` adds shareable anchors to
+  Capsule subsections. It must import `SectionBox` from Headlamp's public
+  `CommonComponents` entry point. A deep `components/common/SectionBox` import
+  can type-check and bundle successfully but is unavailable in Headlamp's
+  browser plugin API, causing every wrapped subsection to disappear at runtime.
 - This pattern is applied to Tenant, all dedicated quota/ResourcePool pages,
   TenantResource, and GlobalTenantResource detail views. Tenant identity/links,
   scheduling/class information, and its namespace graph are proper `SectionBox`
@@ -447,11 +452,11 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   Tenant selector, list, detail title, and selected-Tenant tabs. Keep **No
   Tenant Filter** and multi-Tenant
   aggregate indicators distinct because they represent scope rather than one
-  Tenant. `CAPSULE_ICONIFY_ICON` exposes the same mark in the icon-data format
-  required by Headlamp's parent **Capsule** sidebar entry. Nested **Tenant** /
-  **Tenants** menu entries intentionally retain their resource-oriented account
-  icons; the Capsule mark is the fallback for each Tenant object, not the
-  submenu category. Artwork source:
+  Tenant. The parent **Capsule** sidebar entry uses the same built-in account
+  group icon as the **Tenants** leaf. Nested **Tenant** / **Tenants** menu
+  entries intentionally retain their resource-oriented account icons; the
+  Capsule mark is the fallback for each Tenant object, not a menu-category
+  icon. Artwork source:
   <https://github.com/cncf/artwork/tree/main/projects/capsule/icon/color>.
   Annotation links render in a dedicated `Links` section only when at least one
   parsed link exists. Unsafe link schemes are rejected as navigation targets by
@@ -479,7 +484,7 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   annotations remain legible in dark and light themes. The complete context row
   and tabs have a 62px minimum height; link buttons have a 48px minimum height.
   Tenants without valid link targets do not render an empty link zone or `No
-  links configured` filler. An empty selection means **No Tenant Filter** and
+links configured` filler. An empty selection means **No Tenant Filter** and
   must render no context row.
 - `TenantBox.tsx` labels an empty selection **No Tenant Filter**, because its
   cleared Namespace filter can include non-Tenant namespaces; do not call this

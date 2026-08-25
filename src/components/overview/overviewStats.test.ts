@@ -20,8 +20,8 @@ describe('overview stats', () => {
     expect(
       countQuotaHealth([
         { spec: { limit: '10' }, status: { usage: { used: '2' } } },
-        { spec: { limit: '10' }, status: { usage: { used: '8' } } },
-        { spec: { limit: '10' }, status: { usage: { used: '10' } } },
+        { spec: { limit: '10' }, status: { usage: { used: '8.5' } } },
+        { spec: { limit: '10' }, status: { usage: { used: '9.5' } } },
       ])
     ).toEqual({ healthy: 1, warning: 1, critical: 1, total: 3 });
   });

@@ -75,7 +75,7 @@ export function parseKubernetesQuantity(q: string | number | null | undefined): 
   return value;
 }
 
-/** Usage as a percentage (0-100, not clamped) of `used` against `limit`. */
+/** Usage as a percentage of `used` against `limit`, intentionally not capped at 100%. */
 export function usagePercent(
   used: string | number | null | undefined,
   limit: string | number | null | undefined
@@ -85,12 +85,33 @@ export function usagePercent(
   return l > 0 ? (u / l) * 100 : 0;
 }
 
-/** Hex color for a usage percentage (green <70%, orange 70-90%, red >90%). */
+export const USAGE_WARNING_PERCENT = 85;
+export const USAGE_CRITICAL_PERCENT = 95;
+
+export type UsageSeverity = 'healthy' | 'warning' | 'critical';
+
+/**
+ * Shared usage bands: green below 85%, orange from 85% to below 95%, and red
+ * from 95% upward. Percentages are intentionally not capped at 100%.
+ */
+export function usageSeverity(percent: number): UsageSeverity {
+  if (percent >= USAGE_CRITICAL_PERCENT) return 'critical';
+  if (percent >= USAGE_WARNING_PERCENT) return 'warning';
+  return 'healthy';
+}
+
+/** Hex color for a usage percentage. */
 export function usageHex(percent: number): string {
-  return percent > 90 ? '#f44336' : percent > 70 ? '#ff9800' : '#4caf50';
+  const severity = usageSeverity(percent);
+  if (severity === 'critical') return '#f44336';
+  if (severity === 'warning') return '#ff9800';
+  return '#4caf50';
 }
 
 /** MUI Chip color for a usage percentage. */
 export function usageChipColor(percent: number): 'error' | 'warning' | 'success' {
-  return percent > 90 ? 'error' : percent > 70 ? 'warning' : 'success';
+  const severity = usageSeverity(percent);
+  if (severity === 'critical') return 'error';
+  if (severity === 'warning') return 'warning';
+  return 'success';
 }

@@ -1,7 +1,7 @@
 import '@xyflow/react/dist/base.css';
 import { Icon } from '@iconify/react';
 import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { Link, SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import {
   Box,
   Chip,
@@ -35,6 +35,8 @@ import {
   quotaResourceSearch,
 } from '../common/quotaAggregation';
 import { QuotaUsage } from '../common/QuotaUsage';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 import {
   type EffectiveNamespaceQuotaRow,
   effectiveNamespaceQuotaRows,
@@ -248,9 +250,11 @@ export function NamespaceQuotaSystems({ namespace }: { namespace: any }) {
         </Stack>
 
         <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.25 }}>
-            Effective resource limits
-          </Typography>
+          <AnchoredSubheading
+            title="Effective resource limits"
+            variant="subtitle1"
+            sx={{ fontWeight: 600, mb: 0.25 }}
+          />
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
             One row per resource. Usage and capacity come from the matching quota system with the
             lowest hard limit; an equal native ResourceQuota is preferred as the concrete Kubernetes

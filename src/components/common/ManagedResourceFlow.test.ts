@@ -42,6 +42,52 @@ describe('managed resource flow', () => {
     expect(graph.nodes.find(node => node.type === 'managedObject')?.data.selected).toBe(true);
   });
 
+  it('groups GlobalTenantResource managed objects into namespace branches', () => {
+    const graph = buildManagedResourceFlowGraph(
+      { kind: 'GlobalTenantResource', metadata: { name: 'global-defaults' } },
+      [
+        { apiVersion: 'v1', kind: 'Secret', name: 'zeta-token', namespace: 'zeta' },
+        { apiVersion: 'v1', kind: 'ConfigMap', name: 'alpha-settings', namespace: 'alpha' },
+        { apiVersion: 'v1', kind: 'Service', name: 'alpha-api', namespace: 'alpha' },
+      ],
+      []
+    );
+
+    const source = graph.nodes.find(node => node.type === 'replicationSource');
+    const namespaces = graph.nodes.filter(node => node.type === 'namespace');
+    const resources = graph.nodes.filter(node => node.type === 'managedObject');
+
+    expect(namespaces.map(node => node.data.name)).toEqual(['alpha', 'zeta']);
+    expect(namespaces.map(node => node.data.count)).toEqual([2, 1]);
+    expect(graph.edges.filter(edge => edge.source === source?.id).map(edge => edge.target)).toEqual(
+      namespaces.map(node => node.id)
+    );
+
+    resources.forEach(resource => {
+      const namespace = namespaces.find(node => node.data.name === resource.data.namespace);
+      expect(graph.edges).toContainEqual(
+        expect.objectContaining({ source: namespace?.id, target: resource.id, animated: true })
+      );
+      expect(resource.position.x).toBeGreaterThan(namespace?.position.x || 0);
+    });
+  });
+
+  it('keeps TenantResource managed objects directly connected to their source', () => {
+    const graph = buildManagedResourceFlowGraph(
+      { kind: 'TenantResource', metadata: { name: 'defaults', namespace: 'alpha' } },
+      [{ apiVersion: 'v1', kind: 'ConfigMap', name: 'settings', namespace: 'alpha' }],
+      []
+    );
+
+    expect(graph.nodes.some(node => node.type === 'namespace')).toBe(false);
+    expect(graph.edges).toEqual([
+      expect.objectContaining({
+        source: 'capsule-replication-source',
+        target: expect.stringContaining('managed-'),
+      }),
+    ]);
+  });
+
   it('places declared dependencies left of the replication source and animates their state', () => {
     const graph = buildManagedResourceFlowGraph(
       {

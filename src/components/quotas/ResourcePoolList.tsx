@@ -7,6 +7,7 @@ import { usageChipColor } from '../../utils/quantity';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { QuotaMetricSummary } from '../common/QuotaMetricSummary';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
 import {
@@ -79,6 +80,7 @@ export function ResourcePoolsList() {
         id="capsule-resource-pools"
         title="Resource Pools"
         resourceClass={ResourcePool}
+        headerProps={anchoredResourceListHeaderProps('Resource Pools')}
         defaultSortingColumn={{ id: 'peak-usage', desc: true }}
         columns={[
           {

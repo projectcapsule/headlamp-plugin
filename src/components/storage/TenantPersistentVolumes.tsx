@@ -1,6 +1,7 @@
-import { Link, ResourceListView, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import type { ChipProps } from '@mui/material';
 import { Box, Chip } from '@mui/material';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import {
   persistentVolumeCapacity,
   persistentVolumeClaim,

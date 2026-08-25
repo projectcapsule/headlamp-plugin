@@ -1,5 +1,5 @@
 import { isResourceReady } from '../../resources/tenantResources.helpers';
-import { usagePercent } from '../../utils/quantity';
+import { usagePercent, usageSeverity } from '../../utils/quantity';
 
 export interface ReadinessStats {
   ready: number;
@@ -34,8 +34,9 @@ export function countQuotaHealth(items: any[] | null | undefined): QuotaHealthSt
     const spec = item?.spec || item?.jsonData?.spec;
     const status = item?.status || item?.jsonData?.status;
     const percentage = usagePercent(status?.usage?.used, spec?.limit);
-    if (percentage > 90) critical++;
-    else if (percentage > 70) warning++;
+    const severity = usageSeverity(percentage);
+    if (severity === 'critical') critical++;
+    else if (severity === 'warning') warning++;
     else healthy++;
   });
 

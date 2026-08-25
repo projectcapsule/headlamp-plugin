@@ -1,5 +1,6 @@
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import type { ReactNode } from 'react';
+import { AnchoredSubheading } from './SectionAnchor';
 
 export interface SummaryCardGridProps {
   children: ReactNode;
@@ -41,9 +42,12 @@ export function SummaryCardGrid({
       }}
     >
       {title && (
-        <Typography variant="h6" component="h2" sx={{ fontWeight: 500, mb: 1.5 }}>
-          {title}
-        </Typography>
+        <AnchoredSubheading
+          title={title}
+          variant="h6"
+          component="h2"
+          sx={{ fontWeight: 500, mb: 1.5 }}
+        />
       )}
       <Box
         sx={{

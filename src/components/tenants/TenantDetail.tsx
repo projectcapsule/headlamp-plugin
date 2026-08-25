@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { Link, ResourceListView, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource, { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Alert, AlertTitle, Avatar, Box, Chip, IconButton, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,6 +19,8 @@ import { getTenantSpaceNames } from '../../utils/tenantSpaces';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { NamespaceCordonAction } from '../common/ReconcileActions';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 import { TENANT_REFRESH_EVENT } from '../common/tenantCordon';
 import { TenantVisualIcon } from '../common/TenantVisualIcon';
 import {
@@ -248,9 +250,7 @@ export function TenantDetail(props: TenantProps) {
               >
                 {tenant?.spec?.nodeSelector && (
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Node Selector
-                    </Typography>
+                    <AnchoredSubheading title="Node Selector" variant="subtitle2" gutterBottom />
                     <Box
                       sx={{
                         p: 1,
@@ -268,9 +268,11 @@ export function TenantDetail(props: TenantProps) {
                 )}
                 {tenant?.spec?.storageClasses && (
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Allowed Storage Classes
-                    </Typography>
+                    <AnchoredSubheading
+                      title="Allowed Storage Classes"
+                      variant="subtitle2"
+                      gutterBottom
+                    />
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {(
                         (tenant.spec.storageClasses as any).allowed ||
@@ -292,9 +294,11 @@ export function TenantDetail(props: TenantProps) {
                 )}
                 {tenant?.spec?.ingressClasses && (
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Allowed Ingress Classes
-                    </Typography>
+                    <AnchoredSubheading
+                      title="Allowed Ingress Classes"
+                      variant="subtitle2"
+                      gutterBottom
+                    />
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {((tenant.spec.ingressClasses as any).allowed || []).map(
                         (ic: string, i: number) => (

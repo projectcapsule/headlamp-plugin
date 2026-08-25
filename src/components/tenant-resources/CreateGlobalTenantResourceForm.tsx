@@ -3,6 +3,7 @@ import {
   type FormSection,
 } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Box, Button, IconButton, TextField, Typography } from '@mui/material';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 
 export interface CreateGlobalTenantResourceFormProps {
   resource?: Record<string, any>;
@@ -90,9 +91,7 @@ export default function CreateGlobalTenantResourceForm(props: CreateGlobalTenant
       <CreateResourceForm sections={sections} resource={normalizedResource} onChange={onChange} />
 
       <Box sx={{ mt: 1.5 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Replicated Resources
-        </Typography>
+        <AnchoredSubheading title="Replicated Resources" variant="subtitle1" gutterBottom />
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
           GlobalTenantResource (cluster admin) replicates into namespaces of selected Tenants. Use{' '}
           <strong>namespacedItems</strong> to copy existing objects (ConfigMaps, Secrets, etc.).

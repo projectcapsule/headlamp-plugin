@@ -14,6 +14,7 @@ import {
   TenantResourceReconcileAction,
 } from '../common/ReconcileActions';
 import { ReplicationDependenciesCell } from '../common/ReplicationDependencies';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { TenantResourcesStats } from '../common/TenantResourcesStats';
 
 export function TenantResourcesList() {
@@ -26,6 +27,7 @@ export function TenantResourcesList() {
         id="capsule-tenant-resources"
         title="Tenant Resources"
         resourceClass={TenantResource}
+        headerProps={anchoredResourceListHeaderProps('Tenant Resources')}
         enableRowActions
         actions={[
           {

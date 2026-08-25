@@ -3,6 +3,7 @@ import {
   type FormSection,
 } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Box, Button, IconButton, TextField, Typography } from '@mui/material';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 
 export interface CreateTenantResourceFormProps {
   resource?: Record<string, any>;
@@ -101,9 +102,11 @@ export default function CreateTenantResourceForm(props: CreateTenantResourceForm
       <CreateResourceForm sections={sections} resource={normalizedResource} onChange={onChange} />
 
       <Box sx={{ mt: 1.5 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Replicated Resources (Replication Rules)
-        </Typography>
+        <AnchoredSubheading
+          title="Replicated Resources (Replication Rules)"
+          variant="subtitle1"
+          gutterBottom
+        />
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
           Define what gets automatically copied into the Tenant’s namespaces (ConfigMaps, Secrets,
           NetworkPolicies, LimitRanges…). The modern/recommended way is{' '}

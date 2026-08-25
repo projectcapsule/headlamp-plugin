@@ -1,9 +1,11 @@
-import { ResourceListView, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Alert, Chip, Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { CapsuleConfiguration } from '../../resources/capsuleConfigurations';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
 import {
@@ -118,6 +120,7 @@ export function CapsuleConfigurationList() {
         id="capsule-configurations"
         title="Capsule Configuration"
         resourceClass={CapsuleConfiguration}
+        headerProps={anchoredResourceListHeaderProps('Capsule Configuration')}
         defaultSortingColumn={{ id: 'name', desc: false }}
         columns={[
           {

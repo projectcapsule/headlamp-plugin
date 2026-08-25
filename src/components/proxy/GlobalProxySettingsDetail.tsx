@@ -1,4 +1,4 @@
-import { SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
 import { useMemo } from 'react';
@@ -7,6 +7,7 @@ import { GlobalProxySettings } from '../../resources/globalProxySettings';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import {
   globalProxyClusterResourceCount,
   globalProxyReadyCondition,

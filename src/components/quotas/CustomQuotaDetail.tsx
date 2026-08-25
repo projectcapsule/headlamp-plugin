@@ -1,4 +1,3 @@
-import { SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource, { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import { useParams } from 'react-router-dom';
@@ -9,6 +8,7 @@ import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { QuotaAggregationView } from '../common/QuotaAggregationView';
 import { QuotaClaims } from '../common/QuotaClaims';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { customQuotaAggregation } from './customQuotaAggregationHelpers';
 
 export interface CustomQuotaDetailProps {
@@ -49,7 +49,7 @@ export function CustomQuotaDetail(props: CustomQuotaDetailProps) {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography>{used}</Typography>
                   <Tooltip
-                    title={`${p.toFixed(1)}% of limit (green &lt;70%, orange 70-90%, red &gt;90%)`}
+                    title={`${p.toFixed(1)}% of limit (green <85%, orange 85% to <95%, red >=95%)`}
                   >
                     <Box>
                       {(() => {

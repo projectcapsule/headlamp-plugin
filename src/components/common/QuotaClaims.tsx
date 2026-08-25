@@ -1,5 +1,5 @@
 import { Router } from '@kinvolk/headlamp-plugin/lib';
-import { Link, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import { Cell, Pie, PieChart } from 'recharts';
@@ -10,6 +10,8 @@ import {
   usageHex,
   usagePercent,
 } from '../../utils/quantity';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
+import { AnchoredSubheading } from './SectionAnchor';
 
 type QuotaClaim = NonNullable<NonNullable<CustomQuota['status']>['claims']>[number];
 
@@ -57,7 +59,7 @@ export function QuotaClaims({
         <Typography>
           Overall usage: {used} / {limit} ({overallPct.toFixed(1)}%)
         </Typography>
-        <Tooltip title="Pie: total claims usage vs limit (green &lt;70%, orange 70-90%, red &gt;90%)">
+        <Tooltip title="Pie: total claims usage vs limit (green <85%, orange 85% to <95%, red >=95%)">
           <Box>
             {(() => {
               const pieData = [
@@ -95,9 +97,13 @@ export function QuotaClaims({
       </Box>
       {Object.entries(grouped).map(([kind, kindClaims], index, entries) => (
         <Box key={kind} sx={{ mb: index === entries.length - 1 ? 0 : 3 }}>
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
-            {kind} ({kindClaims.length})
-          </Typography>
+          <AnchoredSubheading
+            anchor={`claims-${kind}`}
+            title={`${kind} (${kindClaims.length})`}
+            variant="subtitle1"
+            gutterBottom
+            sx={{ fontWeight: 500 }}
+          />
           <SimpleTable
             columns={[
               {

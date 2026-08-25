@@ -14,6 +14,7 @@ import {
   GlobalTenantResourceReconcileAction,
 } from '../common/ReconcileActions';
 import { ReplicationDependenciesCell } from '../common/ReplicationDependencies';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { TenantResourcesStats } from '../common/TenantResourcesStats';
 
 export function GlobalTenantResourcesList() {
@@ -26,6 +27,7 @@ export function GlobalTenantResourcesList() {
         id="capsule-global-tenant-resources"
         title="Global Tenant Resources"
         resourceClass={GlobalTenantResource}
+        headerProps={anchoredResourceListHeaderProps('Global Tenant Resources')}
         enableRowActions
         actions={[
           {

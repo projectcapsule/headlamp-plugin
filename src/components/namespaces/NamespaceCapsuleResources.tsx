@@ -12,6 +12,7 @@ import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { QuotaUsage } from '../common/QuotaUsage';
 import { ReplicationDependenciesCell } from '../common/ReplicationDependencies';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 
 function namespaceIdentity(namespace: any) {
   return {
@@ -33,6 +34,7 @@ export function NamespaceCustomQuotas({ namespace }: { namespace: any }) {
       id="capsule-namespace-customquotas"
       title="Custom Quotas"
       data={items}
+      headerProps={anchoredResourceListHeaderProps('Custom Quotas')}
       errorMessage={CustomQuota.getErrorMessage(error)}
       defaultSortingColumn={{ id: 'name', desc: false }}
       reflectInURL={false}
@@ -96,6 +98,7 @@ export function NamespaceTenantResources({ namespace }: { namespace: any }) {
       id="capsule-namespace-tenantresources"
       title="Tenant Resources"
       data={items}
+      headerProps={anchoredResourceListHeaderProps('Tenant Resources')}
       errorMessage={TenantResource.getErrorMessage(error)}
       defaultSortingColumn={{ id: 'name', desc: false }}
       reflectInURL={false}
