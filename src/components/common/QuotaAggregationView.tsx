@@ -12,6 +12,7 @@ import {
 import { useMemo } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { usageChipColor } from '../../utils/quantity';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 import {
   ALL_QUOTA_RESOURCES,
   compareQuotaUtilizationDescending,
@@ -23,7 +24,6 @@ import {
 } from './quotaAggregation';
 import { QuotaConsumptionFlow } from './QuotaConsumptionFlow';
 import { QuotaUsage } from './QuotaUsage';
-import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 
 export function QuotaAggregationView({
   cluster,

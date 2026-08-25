@@ -4,11 +4,11 @@ import { Typography } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { ResourcePool, ResourcePoolClaim } from '../../resources/resourcePools';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { ResourcePoolClaimFlow } from './ResourcePoolClaimFlow';
 
 export interface ResourcePoolClaimDetailProps {

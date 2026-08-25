@@ -6,10 +6,10 @@ import { useParams } from 'react-router-dom';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { TenantOwner } from '../../resources/tenantOwners';
 import { Tenants } from '../../resources/tenants';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { TenantOwnerFlow } from './TenantOwnerFlow';
 import {
   referencedTenantsForOwner,
