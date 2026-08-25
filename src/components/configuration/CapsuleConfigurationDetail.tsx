@@ -5,10 +5,10 @@ import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { CapsuleConfiguration } from '../../resources/capsuleConfigurations';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import {
   type CapsuleConfigurationIdentityRow,
   capsuleConfigurationIdentityRows,

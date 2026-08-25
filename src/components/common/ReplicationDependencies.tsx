@@ -5,8 +5,8 @@ import {
   getReplicationDependencies,
   type ReplicationDependency,
 } from '../../resources/tenantResources';
-import { CapsuleResourceLink } from './CapsuleResourceLink';
 import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
+import { CapsuleResourceLink } from './CapsuleResourceLink';
 
 function DependencyLink({ dependency }: { dependency: ReplicationDependency }) {
   return (

@@ -13,12 +13,12 @@ import {
   getSpecResourcesCount,
   GlobalTenantResource,
 } from '../../resources/tenantResources';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { ManagedResources } from '../common/ManagedResources';
 import { REPLICATION_RESOURCE_REFRESH_EVENT } from '../common/replicationCordon';
 import { ReplicationDependenciesSection } from '../common/ReplicationDependencies';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { AnchoredSubheading } from '../common/SectionAnchor';
 
 export interface GlobalTenantResourceDetailProps {

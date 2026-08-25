@@ -4,10 +4,10 @@ import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { GlobalProxySettings } from '../../resources/globalProxySettings';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import {
   globalProxyClusterResourceCount,
   globalProxyReadyCondition,

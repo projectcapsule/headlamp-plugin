@@ -4,11 +4,11 @@ import { useParams } from 'react-router-dom';
 import { Cell, Pie, PieChart } from 'recharts';
 import { CustomQuota } from '../../resources/customQuotas';
 import { parseKubernetesQuantity, usageHex } from '../../utils/quantity';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { QuotaAggregationView } from '../common/QuotaAggregationView';
 import { QuotaClaims } from '../common/QuotaClaims';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { customQuotaAggregation } from './customQuotaAggregationHelpers';
 
 export interface CustomQuotaDetailProps {

@@ -16,10 +16,10 @@ import {
   safeUrl,
 } from '../../utils/tenantMeta';
 import { getTenantSpaceNames } from '../../utils/tenantSpaces';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { NamespaceCordonAction } from '../common/ReconcileActions';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { AnchoredSubheading } from '../common/SectionAnchor';
 import { TENANT_REFRESH_EVENT } from '../common/tenantCordon';
 import { TenantVisualIcon } from '../common/TenantVisualIcon';

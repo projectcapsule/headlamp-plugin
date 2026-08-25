@@ -3,8 +3,8 @@ import type { KubeObject } from '@kinvolk/headlamp-plugin/lib/k8s/cluster';
 import Event from '@kinvolk/headlamp-plugin/lib/k8s/event';
 import { Box, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { ConditionStatusChip } from './ConditionStatusChip';
 import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
+import { ConditionStatusChip } from './ConditionStatusChip';
 
 export interface ConditionsAndEventsProps {
   resource?: KubeObject | null;

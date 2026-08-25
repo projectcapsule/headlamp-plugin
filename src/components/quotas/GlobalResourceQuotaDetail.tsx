@@ -5,10 +5,10 @@ import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { GlobalResourceQuota } from '../../resources/globalResourceQuotas';
 import { usageChipColor } from '../../utils/quantity';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { QuotaAggregationView } from '../common/QuotaAggregationView';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { AnchoredSubheading } from '../common/SectionAnchor';
 import {
   globalResourceQuotaAggregation,
