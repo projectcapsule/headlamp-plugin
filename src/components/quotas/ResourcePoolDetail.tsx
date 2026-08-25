@@ -6,12 +6,12 @@ import { useParams } from 'react-router-dom';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { ResourcePool, ResourcePoolClaim } from '../../resources/resourcePools';
 import { usageChipColor } from '../../utils/quantity';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { QuotaAggregationView } from '../common/QuotaAggregationView';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { AnchoredSubheading } from '../common/SectionAnchor';
 import { ResourcePoolClaimReleaseAction } from './ResourcePoolClaimReleaseAction';
 import {

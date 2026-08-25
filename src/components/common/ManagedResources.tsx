@@ -26,9 +26,9 @@ import {
   getPlural,
   type ReplicationDependency,
 } from '../../resources/tenantResources';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 import { ManagedResourceFlow, managedResourceKey } from './ManagedResourceFlow';
 import { anchoredResourceListHeaderProps, AnchoredSubheading } from './SectionAnchor';
-import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 import {
   buildSSAFieldLines,
   type ManagedFieldSelection,

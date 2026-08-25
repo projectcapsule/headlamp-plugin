@@ -15,6 +15,7 @@ import { CustomQuota, GlobalCustomQuota } from '../../resources/customQuotas';
 import { GlobalResourceQuota } from '../../resources/globalResourceQuotas';
 import { ResourcePool } from '../../resources/resourcePools';
 import { usageChipColor } from '../../utils/quantity';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import {
   ALL_QUOTA_RESOURCES,
@@ -22,7 +23,6 @@ import {
   quotaResourceSearch,
 } from '../common/quotaAggregation';
 import { QuotaUsage } from '../common/QuotaUsage';
-import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { AnchoredSubheading } from '../common/SectionAnchor';
 import { TenantQuotaFlow } from './TenantQuotaFlow';
 import {
