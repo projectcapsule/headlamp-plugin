@@ -13,6 +13,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 
 export interface CreateCustomQuotaFormProps {
   resource?: Record<string, any>;
@@ -90,9 +91,7 @@ export default function CreateCustomQuotaForm(props: CreateCustomQuotaFormProps)
       <CreateResourceForm sections={sections} resource={normalizedResource} onChange={onChange} />
 
       <Box sx={{ mt: 1.5 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Sources (what to count)
-        </Typography>
+        <AnchoredSubheading title="Sources (what to count)" variant="subtitle1" gutterBottom />
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
           Define which objects contribute to this quota (e.g. count Pods, sum PVC storage requests).
           See Capsule Custom Quotas docs for JSONPath paths, selectors, and Global vs namespaced

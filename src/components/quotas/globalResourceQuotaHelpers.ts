@@ -1,4 +1,4 @@
-import { usagePercent } from '../../utils/quantity';
+import { usagePercent, usageSeverity } from '../../utils/quantity';
 import type { QuotaAggregationData, QuotaAggregationMetric } from '../common/quotaAggregation';
 
 export type GlobalResourceQuotaMetric = QuotaAggregationMetric;
@@ -143,8 +143,9 @@ export function summarizeGlobalResourceQuotas(items: any[] | null | undefined) {
     if (String(readyCondition?.status).toLowerCase() === 'true') ready += 1;
 
     const peak = globalResourceQuotaPeakUsage(item);
-    if (peak > 90) critical += 1;
-    else if (peak > 70) warning += 1;
+    const severity = usageSeverity(peak);
+    if (severity === 'critical') critical += 1;
+    else if (severity === 'warning') warning += 1;
     else healthy += 1;
 
     namespaces +=

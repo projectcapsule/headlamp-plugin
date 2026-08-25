@@ -3,6 +3,7 @@ import { DateLabel } from '@kinvolk/headlamp-plugin/lib/components/common';
 import Event from '@kinvolk/headlamp-plugin/lib/k8s/event';
 import { Chip, Typography } from '@mui/material';
 import { useMemo } from 'react';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { capsuleEventTimestamp, isCapsuleResourceEvent } from './capsuleEventHelpers';
 
 const resourceRoutes: Record<string, { routeName: string; namespaced: boolean }> = {
@@ -77,7 +78,9 @@ export function CapsuleEvents() {
       enableRowSelection={false}
       errorMessage={error ? error.message || String(error) : null}
       reflectInURL={false}
-      headerProps={{ noNamespaceFilter: true }}
+      headerProps={anchoredResourceListHeaderProps('Capsule Events', {
+        headerProps: { noNamespaceFilter: true },
+      })}
       columns={[
         {
           id: 'type',

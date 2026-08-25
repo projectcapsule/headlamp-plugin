@@ -5,8 +5,8 @@ export interface CapsuleIconProps extends Omit<SVGProps<SVGSVGElement>, 'height'
 }
 
 /**
- * Iconify-compatible copy of the Capsule mark for Headlamp APIs which accept
- * icon data instead of a React element (notably the parent sidebar entry).
+ * Iconify-compatible copy of the Capsule mark for consumers which accept icon
+ * data instead of a React element. Sidebar categories use built-in MDI icons.
  */
 export const CAPSULE_ICONIFY_ICON = {
   width: 1072.58,

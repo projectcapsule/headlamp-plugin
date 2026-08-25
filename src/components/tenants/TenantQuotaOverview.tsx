@@ -1,4 +1,4 @@
-import { SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import {
   Box,
   Chip,
@@ -22,6 +22,8 @@ import {
   quotaResourceSearch,
 } from '../common/quotaAggregation';
 import { QuotaUsage } from '../common/QuotaUsage';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 import { TenantQuotaFlow } from './TenantQuotaFlow';
 import {
   TENANT_QUOTA_LABEL,
@@ -122,9 +124,11 @@ export function TenantQuotaOverview({ tenant }: { tenant?: any }) {
         )}
 
         <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.25 }}>
-            Quota resource usage
-          </Typography>
+          <AnchoredSubheading
+            title="Quota resource usage"
+            variant="subtitle1"
+            sx={{ fontWeight: 600, mb: 0.25 }}
+          />
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
             One row per resource and labeled quota system, sorted by highest utilization.
           </Typography>

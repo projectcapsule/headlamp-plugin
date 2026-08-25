@@ -1,9 +1,10 @@
-import { SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import type { KubeObject } from '@kinvolk/headlamp-plugin/lib/k8s/cluster';
 import Event from '@kinvolk/headlamp-plugin/lib/k8s/event';
 import { Box, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { ConditionStatusChip } from './ConditionStatusChip';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 
 export interface ConditionsAndEventsProps {
   resource?: KubeObject | null;

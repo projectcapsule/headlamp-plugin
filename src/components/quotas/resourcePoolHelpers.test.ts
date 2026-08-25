@@ -144,7 +144,7 @@ describe('ResourcePool quota helpers', () => {
 
   it('summarizes readiness, peak capacity, claims, namespaces, and exhaustion', () => {
     expect(summarizeResourcePools([pool])).toEqual({
-      capacity: { critical: 0, healthy: 0, warning: 1 },
+      capacity: { critical: 0, healthy: 1, warning: 0 },
       claims: 2,
       exhausted: 1,
       namespaces: 3,

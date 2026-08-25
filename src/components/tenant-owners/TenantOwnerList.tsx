@@ -6,6 +6,7 @@ import { TenantOwner } from '../../resources/tenantOwners';
 import { Tenants } from '../../resources/tenants';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
 import { referencedTenantsForOwner, tenantOwnerIdentity } from './tenantOwnerReferences';
@@ -91,6 +92,7 @@ export function TenantOwnersList() {
         id="capsule-tenant-owners"
         title="Tenant Owners"
         resourceClass={TenantOwner}
+        headerProps={anchoredResourceListHeaderProps('Tenant Owners')}
         defaultSortingColumn={{ id: 'name', desc: false }}
         columns={[
           {

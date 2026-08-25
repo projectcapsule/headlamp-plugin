@@ -1,5 +1,5 @@
 import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { Link, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource, { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -18,6 +18,8 @@ import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { ManagedResources } from '../common/ManagedResources';
 import { REPLICATION_RESOURCE_REFRESH_EVENT } from '../common/replicationCordon';
 import { ReplicationDependenciesSection } from '../common/ReplicationDependencies';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 
 export interface GlobalTenantResourceDetailProps {
   name?: string;
@@ -157,9 +159,13 @@ function GlobalTenantResourceDefinedResources({
     <SectionBox title="Defined Resources">
       {Object.entries(grouped).map(([kind, kindResources], index, entries) => (
         <Box key={kind} sx={{ mb: index === entries.length - 1 ? 0 : 3 }}>
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
-            {kind} ({kindResources.length})
-          </Typography>
+          <AnchoredSubheading
+            anchor={`defined-resources-${kind}`}
+            title={`${kind} (${kindResources.length})`}
+            variant="subtitle1"
+            gutterBottom
+            sx={{ fontWeight: 500 }}
+          />
           <SimpleTable
             columns={[
               {

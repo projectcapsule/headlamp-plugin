@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { ApiProxy, K8s } from '@kinvolk/headlamp-plugin/lib';
-import { Link, ResourceListView, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { DateLabel, SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import type { KubeObject, KubeObjectInterface } from '@kinvolk/headlamp-plugin/lib/lib/k8s/cluster';
 import { makeCustomResourceClass } from '@kinvolk/headlamp-plugin/lib/lib/k8s/crd';
@@ -27,6 +27,8 @@ import {
   type ReplicationDependency,
 } from '../../resources/tenantResources';
 import { ManagedResourceFlow, managedResourceKey } from './ManagedResourceFlow';
+import { anchoredResourceListHeaderProps, AnchoredSubheading } from './SectionAnchor';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 import {
   buildSSAFieldLines,
   type ManagedFieldSelection,
@@ -187,7 +189,9 @@ function ManagedResourcesTable({
       enableRowActions={false}
       enableRowSelection={false}
       reflectInURL={false}
-      headerProps={{ noNamespaceFilter: true }}
+      headerProps={anchoredResourceListHeaderProps('Managed resource inventory', {
+        headerProps: { noNamespaceFilter: true },
+      })}
       columns={[
         {
           id: 'name',
@@ -352,9 +356,7 @@ function SSADiffPanel({
       >
         <Icon icon="mdi:file-compare" width={24} height={24} />
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            SSA Diff
-          </Typography>
+          <AnchoredSubheading title="SSA Diff" variant="subtitle1" sx={{ fontWeight: 600 }} />
           <Typography variant="body2" color="text.secondary" noWrap>
             {kind} · {namespace ? `${namespace}/` : ''}
             {name}

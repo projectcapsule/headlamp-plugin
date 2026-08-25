@@ -1,10 +1,12 @@
-import { ResourceListView, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Alert, Chip, Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { GlobalProxySettings } from '../../resources/globalProxySettings';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
 import {
@@ -88,6 +90,7 @@ export function GlobalProxySettingsList() {
         id="capsule-global-proxy-settings"
         title="Global Proxy Settings"
         resourceClass={GlobalProxySettings}
+        headerProps={anchoredResourceListHeaderProps('Global Proxy Settings')}
         defaultSortingColumn={{ id: 'name', desc: false }}
         columns={[
           {

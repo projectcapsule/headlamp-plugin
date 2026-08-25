@@ -1,6 +1,6 @@
-import { SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Typography } from '@mui/material';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 
 export function QuotaSources({ quota }: { quota: any }) {
   const sources = quota?.spec?.sources || [];

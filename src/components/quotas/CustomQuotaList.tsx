@@ -3,9 +3,10 @@ import { Chip, Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { CustomQuota } from '../../resources/customQuotas';
-import { usagePercent } from '../../utils/quantity';
+import { usagePercent, usageSeverity } from '../../utils/quantity';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { QuotaUsage } from '../common/QuotaUsage';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
 
@@ -18,8 +19,9 @@ export function CustomQuotasList() {
     let critical = 0;
     (items || []).forEach(item => {
       const p = usagePercent(item.status?.usage?.used, item.spec?.limit);
-      if (p > 90) critical++;
-      else if (p > 70) warning++;
+      const severity = usageSeverity(p);
+      if (severity === 'critical') critical++;
+      else if (severity === 'warning') warning++;
       else healthy++;
     });
     const total = items?.length || 0;
@@ -45,7 +47,7 @@ export function CustomQuotasList() {
           ]}
           footer={
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-              Based on usage % (healthy &lt;70%)
+              Based on usage % (healthy &lt;85%)
             </Typography>
           }
         />
@@ -71,6 +73,7 @@ export function CustomQuotasList() {
         id="capsule-custom-quotas"
         title="Custom Quotas"
         resourceClass={CustomQuota}
+        headerProps={anchoredResourceListHeaderProps('Custom Quotas')}
         columns={[
           {
             id: 'name',

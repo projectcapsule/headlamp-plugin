@@ -1,4 +1,4 @@
-import { SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Chip, Stack, Typography } from '@mui/material';
 import { useMemo } from 'react';
@@ -9,6 +9,7 @@ import { Tenants } from '../../resources/tenants';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { TenantOwnerFlow } from './TenantOwnerFlow';
 import {
   referencedTenantsForOwner,

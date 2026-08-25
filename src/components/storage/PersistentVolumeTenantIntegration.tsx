@@ -1,5 +1,5 @@
 import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
 import { insertDetailsSectionBefore } from '../namespaces/namespaceDetailsSections';
 import { persistentVolumeClaim, tenantNameForPersistentVolume } from './persistentVolumeTenant';
 import { TenantPersistentVolumeFlow } from './TenantPersistentVolumeFlow';

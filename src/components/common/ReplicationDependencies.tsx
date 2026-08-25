@@ -1,4 +1,3 @@
-import { SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { SimpleTable } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Stack, Typography } from '@mui/material';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
@@ -7,6 +6,7 @@ import {
   type ReplicationDependency,
 } from '../../resources/tenantResources';
 import { CapsuleResourceLink } from './CapsuleResourceLink';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 
 function DependencyLink({ dependency }: { dependency: ReplicationDependency }) {
   return (

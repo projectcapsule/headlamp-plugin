@@ -1,4 +1,4 @@
-import { Link, SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import {
   Box,
   Chip,
@@ -23,6 +23,7 @@ import {
 } from './quotaAggregation';
 import { QuotaConsumptionFlow } from './QuotaConsumptionFlow';
 import { QuotaUsage } from './QuotaUsage';
+import { AnchoredSectionBox as SectionBox } from './AnchoredSectionBox';
 
 export function QuotaAggregationView({
   cluster,

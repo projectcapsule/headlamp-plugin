@@ -1,4 +1,4 @@
-import { Link, SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Stack, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
@@ -11,6 +11,8 @@ import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { ConditionStatusChip } from '../common/ConditionStatusChip';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { QuotaAggregationView } from '../common/QuotaAggregationView';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 import { ResourcePoolClaimReleaseAction } from './ResourcePoolClaimReleaseAction';
 import {
   resourcePoolAggregation,
@@ -70,7 +72,12 @@ function ResourcePoolClaims({ pool, claims }: { pool: any; claims: any[] | null 
         <Stack spacing={3}>
           {grouped.map(([namespace, namespaceClaims]) => (
             <Box key={namespace}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.75 }}>
+              <AnchoredSubheading
+                anchor={`claims-${namespace}`}
+                title={`Claims in ${namespace}`}
+                variant="subtitle1"
+                sx={{ fontWeight: 600, mb: 0.75 }}
+              >
                 <Link
                   routeName="namespace"
                   params={{ name: namespace }}
@@ -79,7 +86,7 @@ function ResourcePoolClaims({ pool, claims }: { pool: any; claims: any[] | null 
                   {namespace}
                 </Link>{' '}
                 ({namespaceClaims.length})
-              </Typography>
+              </AnchoredSubheading>
               <SimpleTable
                 columns={[
                   {
@@ -168,9 +175,7 @@ function ResourcePoolConfiguration({ pool }: { pool: any }) {
     <SectionBox title="Pool Configuration">
       <Stack spacing={2}>
         <Box>
-          <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-            Namespace selectors
-          </Typography>
+          <AnchoredSubheading title="Namespace selectors" variant="subtitle2" sx={{ mb: 0.75 }} />
           {selectors.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               No namespace selectors configured.
@@ -186,9 +191,7 @@ function ResourcePoolConfiguration({ pool }: { pool: any }) {
 
         {defaults.length > 0 && (
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-              Namespace defaults
-            </Typography>
+            <AnchoredSubheading title="Namespace defaults" variant="subtitle2" sx={{ mb: 0.75 }} />
             <Stack direction="row" flexWrap="wrap" gap={0.75}>
               {defaults.map(([resource, value]) => (
                 <Chip key={resource} size="small" label={`${resource}: ${String(value)}`} />
@@ -199,9 +202,7 @@ function ResourcePoolConfiguration({ pool }: { pool: any }) {
 
         {(scopes.length > 0 || scopeExpressions.length > 0) && (
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-              Scope restrictions
-            </Typography>
+            <AnchoredSubheading title="Scope restrictions" variant="subtitle2" sx={{ mb: 0.75 }} />
             <Stack direction="row" flexWrap="wrap" gap={0.75}>
               {scopes.map((scope: string) => (
                 <Chip key={scope} size="small" label={scope} />
@@ -220,9 +221,7 @@ function ResourcePoolConfiguration({ pool }: { pool: any }) {
         )}
 
         <Box>
-          <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-            Claim behavior
-          </Typography>
+          <AnchoredSubheading title="Claim behavior" variant="subtitle2" sx={{ mb: 0.75 }} />
           <Stack direction="row" flexWrap="wrap" gap={0.75}>
             <Chip size="small" label={`Defaults zero: ${config.defaultsZero ? 'Yes' : 'No'}`} />
             <Chip size="small" label={`Ordered queue: ${config.orderedQueue ? 'Yes' : 'No'}`} />

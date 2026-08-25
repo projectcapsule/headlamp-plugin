@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import React from 'react';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 
 export interface CreateTenantFormProps {
   resource?: Record<string, any>;
@@ -105,9 +106,7 @@ export default function CreateTenantForm(props: CreateTenantFormProps) {
       <CreateResourceForm sections={metadataSections} resource={resource} onChange={onChange} />
 
       <Box sx={{ mt: 1.5 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Owners
-        </Typography>
+        <AnchoredSubheading title="Owners" variant="subtitle1" gutterBottom />
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
           Users or Groups who will own this Tenant and can create/manage its Namespaces (see Capsule
           docs on Permissions).
@@ -152,9 +151,11 @@ export default function CreateTenantForm(props: CreateTenantFormProps) {
 
       {/* User-friendly annotations (heavily used by this plugin per Capsule docs) */}
       <Box sx={{ mt: 2.5 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Tenant Info &amp; Appearance (optional)
-        </Typography>
+        <AnchoredSubheading
+          title="Tenant Info & Appearance (optional)"
+          variant="subtitle1"
+          gutterBottom
+        />
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
           These are stored as annotations and improve the experience in the Capsule plugin (chooser,
           lists, detail, overview). See{' '}

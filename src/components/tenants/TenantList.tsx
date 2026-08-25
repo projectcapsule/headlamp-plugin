@@ -20,6 +20,7 @@ import {
 import { findSpaceInfo, getTenantSpaceNames, isSpaceReady } from '../../utils/tenantSpaces';
 import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { TenantCordonAction } from '../common/ReconcileActions';
+import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
 import { TenantVisualIcon } from '../common/TenantVisualIcon';
@@ -245,6 +246,7 @@ export function TenantsList() {
         id="capsule-tenants"
         title="Tenants"
         resourceClass={Tenants}
+        headerProps={anchoredResourceListHeaderProps('Tenants')}
         columns={tenantColumns}
         enableRowActions
         actions={[

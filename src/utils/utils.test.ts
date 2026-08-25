@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseKubernetesQuantity, usageChipColor, usageHex, usagePercent } from './quantity';
+import {
+  parseKubernetesQuantity,
+  usageChipColor,
+  usageHex,
+  usagePercent,
+  usageSeverity,
+} from './quantity';
 import {
   getLinkFaviconUrl,
   getTenantIcon,
@@ -57,12 +63,18 @@ describe('usage helpers', () => {
     expect(usagePercent('1', '0')).toBeCloseTo(100);
   });
 
-  it('maps percentages to colors', () => {
-    expect(usageHex(10)).toBe('#4caf50');
-    expect(usageHex(80)).toBe('#ff9800');
+  it('maps percentages to the shared 85% and 95% usage bands', () => {
+    expect(usageSeverity(84.999)).toBe('healthy');
+    expect(usageSeverity(85)).toBe('warning');
+    expect(usageSeverity(94.999)).toBe('warning');
+    expect(usageSeverity(95)).toBe('critical');
+    expect(usageSeverity(1100)).toBe('critical');
+
+    expect(usageHex(84.999)).toBe('#4caf50');
+    expect(usageHex(85)).toBe('#ff9800');
     expect(usageHex(95)).toBe('#f44336');
-    expect(usageChipColor(10)).toBe('success');
-    expect(usageChipColor(80)).toBe('warning');
+    expect(usageChipColor(84.999)).toBe('success');
+    expect(usageChipColor(85)).toBe('warning');
     expect(usageChipColor(95)).toBe('error');
   });
 });

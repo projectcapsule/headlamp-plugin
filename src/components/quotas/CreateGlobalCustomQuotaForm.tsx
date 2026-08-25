@@ -13,6 +13,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 
 export interface CreateGlobalCustomQuotaFormProps {
   resource?: Record<string, any>;
@@ -93,9 +94,7 @@ export default function CreateGlobalCustomQuotaForm(props: CreateGlobalCustomQuo
       <CreateResourceForm sections={sections} resource={normalizedResource} onChange={onChange} />
 
       <Box sx={{ mt: 1.5 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Scope (which namespaces)
-        </Typography>
+        <AnchoredSubheading title="Scope (which namespaces)" variant="subtitle1" gutterBottom />
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
           GlobalCustomQuota applies across many namespaces (typically via tenant label). Add
           namespaceSelectors.
@@ -116,9 +115,12 @@ export default function CreateGlobalCustomQuotaForm(props: CreateGlobalCustomQuo
           helperText="Most common: target one tenant's namespaces"
         />
 
-        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-          Sources (what to count)
-        </Typography>
+        <AnchoredSubheading
+          title="Sources (what to count)"
+          variant="subtitle1"
+          gutterBottom
+          sx={{ mt: 2 }}
+        />
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
           Define GVK + operation. Use count for number of objects, add/sub + path for quantities
           (storage, cpu...). Full selectors documented at projectcapsule.dev.

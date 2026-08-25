@@ -1,5 +1,4 @@
 import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Resource from '@kinvolk/headlamp-plugin/lib/components/common';
 import { Box, Chip, Stack, Typography } from '@mui/material';
 import { useMemo } from 'react';
@@ -9,6 +8,8 @@ import { usageChipColor } from '../../utils/quantity';
 import { ConditionsAndEvents } from '../common/ConditionsAndEvents';
 import { DetailsSectionStack } from '../common/DetailsSectionStack';
 import { QuotaAggregationView } from '../common/QuotaAggregationView';
+import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
+import { AnchoredSubheading } from '../common/SectionAnchor';
 import {
   globalResourceQuotaAggregation,
   globalResourceQuotaMetrics,
@@ -99,9 +100,7 @@ function QuotaConfiguration({ quota }: { quota: any }) {
     <SectionBox title="Quota Configuration">
       <Stack spacing={2}>
         <Box>
-          <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-            Namespace selectors
-          </Typography>
+          <AnchoredSubheading title="Namespace selectors" variant="subtitle2" sx={{ mb: 0.75 }} />
           {selectors.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               No namespace selectors configured.
@@ -116,9 +115,7 @@ function QuotaConfiguration({ quota }: { quota: any }) {
         </Box>
         {(scopes.length > 0 || scopeExpressions.length > 0) && (
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-              Scope restrictions
-            </Typography>
+            <AnchoredSubheading title="Scope restrictions" variant="subtitle2" sx={{ mb: 0.75 }} />
             <Stack direction="row" flexWrap="wrap" gap={0.75}>
               {scopes.map((scope: string) => (
                 <Chip key={scope} size="small" label={scope} />

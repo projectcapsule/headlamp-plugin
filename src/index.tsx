@@ -20,7 +20,6 @@ import {
   insertDocumentationAction,
 } from './components/common/capsuleDocumentation';
 import { CapsuleDocumentationAction } from './components/common/CapsuleDocumentationAction';
-import { CAPSULE_ICONIFY_ICON } from './components/common/CapsuleIcon';
 import { prewarmCapsuleTableEditAuthorization } from './components/common/CapsuleTableEditAuthorization';
 import {
   GlobalTenantResourceCordonAction,
@@ -77,6 +76,8 @@ import { ResourcePool, ResourcePoolClaim } from './resources/resourcePools';
 import { TenantOwner } from './resources/tenantOwners';
 import { GlobalTenantResource, TenantResource } from './resources/tenantResources';
 import { Tenants } from './resources/tenants';
+
+const TENANTS_MENU_ICON = 'mdi:account-group';
 
 registerAppBarAction(<TenantBox />);
 registerUIPanel({
@@ -173,7 +174,7 @@ registerSidebarEntry({
   parent: '',
   name: 'capsule',
   label: 'Capsule',
-  icon: CAPSULE_ICONIFY_ICON,
+  icon: TENANTS_MENU_ICON,
   url: '/capsule/overview/',
 });
 
@@ -197,7 +198,7 @@ registerSidebarEntry({
   parent: 'capsule-tenant-section',
   name: 'tenants',
   label: 'Tenants',
-  icon: 'mdi:account-group',
+  icon: TENANTS_MENU_ICON,
   url: capsuleCustomResourceListPath(CAPSULE_CRDS.Tenant),
 });
 

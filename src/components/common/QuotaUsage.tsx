@@ -17,7 +17,7 @@ export function QuotaUsage({ used = '0', limit = '0', size = 20 }: QuotaUsagePro
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       <Typography variant="body2">{used}</Typography>
-      <Tooltip title={`${p.toFixed(1)}% of limit (green &lt;70%, orange 70-90%, red &gt;90%)`}>
+      <Tooltip title={`${p.toFixed(1)}% of limit (green <85%, orange 85% to <95%, red >=95%)`}>
         <Box>
           {(() => {
             const pieData = [

@@ -1,5 +1,5 @@
 import { isResourceReady } from '../../resources/tenantResources.helpers';
-import { parseKubernetesQuantity, usagePercent } from '../../utils/quantity';
+import { parseKubernetesQuantity, usagePercent, usageSeverity } from '../../utils/quantity';
 import type { QuotaAggregationData, QuotaAggregationMetric } from '../common/quotaAggregation';
 import { formatQuantityLike } from './customQuotaAggregationHelpers';
 
@@ -215,8 +215,9 @@ export function summarizeResourcePools(items: any[] | null | undefined) {
     if (isResourceReady(pool)) summary.readiness.ready += 1;
     else summary.readiness.notReady += 1;
     const peak = resourcePoolPeakUsage(pool);
-    if (peak > 90) summary.capacity.critical += 1;
-    else if (peak > 70) summary.capacity.warning += 1;
+    const severity = usageSeverity(peak);
+    if (severity === 'critical') summary.capacity.critical += 1;
+    else if (severity === 'warning') summary.capacity.warning += 1;
     else summary.capacity.healthy += 1;
     const json = objectData(pool);
     summary.claims += Number(json.status?.claimCount) || 0;

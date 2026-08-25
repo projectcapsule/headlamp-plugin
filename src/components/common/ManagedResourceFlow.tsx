@@ -18,6 +18,7 @@ import {
   getManagedObjectReadyStatus,
   type ReplicationDependency,
 } from '../../resources/tenantResources.helpers';
+import { AnchoredSubheading } from './SectionAnchor';
 
 const SOURCE_WIDTH = 250;
 const SOURCE_HEIGHT = 88;
@@ -26,6 +27,10 @@ const RESOURCE_HEIGHT = 78;
 const RESOURCES_PER_COLUMN = 4;
 const RESOURCE_START_Y = 20;
 const RESOURCE_STEP_Y = 108;
+const NAMESPACE_WIDTH = 235;
+const NAMESPACE_HEIGHT = 78;
+const NAMESPACE_STEP_X = 295;
+const NAMESPACE_GROUP_GAP_Y = 32;
 const DEPENDENCY_WIDTH = 250;
 const DEPENDENCY_HEIGHT = 78;
 const DEPENDENCIES_PER_COLUMN = 4;
@@ -235,15 +240,104 @@ function ManagedObjectNode({ data }: any) {
   );
 }
 
+function NamespaceNode({ data }: any) {
+  return (
+    <Box
+      sx={theme => ({
+        width: '100%',
+        height: '100%',
+        px: 1.5,
+        py: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'primary.main',
+        borderRadius: 1.5,
+        boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.08)}`,
+      })}
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: '#1976d2', width: 8, height: 8 }}
+      />
+      <Icon icon="mdi:kubernetes" width={27} height={27} />
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {data.namespace ? 'Namespace' : 'Scope'}
+        </Typography>
+        <Typography variant="body2" noWrap sx={{ fontWeight: 650 }}>
+          {data.name}
+        </Typography>
+      </Box>
+      <Chip size="small" color="primary" variant="outlined" label={data.count} />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: '#1976d2', width: 8, height: 8 }}
+      />
+    </Box>
+  );
+}
+
 const nodeTypes = {
   dependency: DependencyNode,
   replicationSource: SourceNode,
+  namespace: NamespaceNode,
   managedObject: ManagedObjectNode,
 };
 
 export interface ManagedResourceFlowGraph {
   nodes: Node[];
   edges: Edge[];
+}
+
+interface ManagedResourceNamespaceGroup {
+  descriptors: any[];
+  key: string;
+  name: string;
+  namespace?: string;
+}
+
+function groupManagedResourcesByNamespace(applied: any[]): ManagedResourceNamespaceGroup[] {
+  const groups = new Map<string, ManagedResourceNamespaceGroup>();
+
+  applied.forEach(descriptor => {
+    const namespace = objectMetadata(descriptor).namespace || undefined;
+    const key = namespace || '-';
+    const existing = groups.get(key);
+    if (existing) {
+      existing.descriptors.push(descriptor);
+      return;
+    }
+    groups.set(key, {
+      descriptors: [descriptor],
+      key,
+      name: namespace || 'Cluster scoped',
+      namespace,
+    });
+  });
+
+  return [...groups.values()].sort((left, right) => {
+    if (!left.namespace && right.namespace) return 1;
+    if (left.namespace && !right.namespace) return -1;
+    return left.name.localeCompare(right.name);
+  });
+}
+
+function namespaceGroupHeight(group: ManagedResourceNamespaceGroup): number {
+  const rows = Math.min(RESOURCES_PER_COLUMN, group.descriptors.length);
+  return rows ? RESOURCE_HEIGHT + (rows - 1) * RESOURCE_STEP_Y : NAMESPACE_HEIGHT;
+}
+
+function namespaceGroupsHeight(groups: ManagedResourceNamespaceGroup[]): number {
+  if (groups.length === 0) return SOURCE_HEIGHT;
+  return (
+    groups.reduce((height, group) => height + namespaceGroupHeight(group), 0) +
+    (groups.length - 1) * NAMESPACE_GROUP_GAP_Y
+  );
 }
 
 /** Creates a stable left-to-right replication graph for the detail views. */
@@ -256,9 +350,13 @@ export function buildManagedResourceFlowGraph(
 ): ManagedResourceFlowGraph {
   const source = objectData(item);
   const sourceMetadata = objectMetadata(source);
+  const groupByNamespace = objectKind(source) === 'GlobalTenantResource';
+  const namespaceGroups = groupByNamespace ? groupManagedResourcesByNamespace(applied) : [];
   const targetRows = Math.min(RESOURCES_PER_COLUMN, applied.length);
   const dependencyRows = Math.min(DEPENDENCIES_PER_COLUMN, dependencies.length);
-  const targetHeight = targetRows
+  const targetHeight = groupByNamespace
+    ? namespaceGroupsHeight(namespaceGroups)
+    : targetRows
     ? RESOURCE_HEIGHT + (targetRows - 1) * RESOURCE_STEP_Y
     : SOURCE_HEIGHT;
   const dependencyHeight = dependencyRows
@@ -329,10 +427,13 @@ export function buildManagedResourceFlowGraph(
     });
   });
 
-  applied.forEach((descriptor, index) => {
+  const addManagedObject = (
+    descriptor: any,
+    index: number,
+    position: { x: number; y: number },
+    edgeSource = sourceId
+  ) => {
     const metadata = objectMetadata(descriptor);
-    const column = Math.floor(index / RESOURCES_PER_COLUMN);
-    const row = index % RESOURCES_PER_COLUMN;
     const key = managedResourceKey(descriptor);
     const id = `managed-${index}-${key}`;
     const liveObject = matchingLiveObject(descriptor, resources);
@@ -341,7 +442,7 @@ export function buildManagedResourceFlowGraph(
     nodes.push({
       id,
       type: 'managedObject',
-      position: { x: targetX + column * 295, y: targetStartY + row * RESOURCE_STEP_Y },
+      position,
       data: {
         descriptor,
         liveObject,
@@ -361,14 +462,78 @@ export function buildManagedResourceFlowGraph(
     });
     edges.push({
       id: `replication-${index}`,
-      source: sourceId,
+      source: edgeSource,
       target: id,
       type: 'smoothstep',
       animated: true,
       markerEnd: { type: MarkerType.ArrowClosed },
       style: { strokeWidth: selectedKey === key ? 2.5 : 1.75 },
     });
-  });
+  };
+
+  if (groupByNamespace) {
+    let groupOffsetY = 0;
+    let descriptorIndex = 0;
+
+    namespaceGroups.forEach((group, groupIndex) => {
+      const groupHeight = namespaceGroupHeight(group);
+      const namespaceId = `managed-namespace-${group.key}`;
+      nodes.push({
+        id: namespaceId,
+        type: 'namespace',
+        position: {
+          x: targetX,
+          y: targetStartY + groupOffsetY + (groupHeight - NAMESPACE_HEIGHT) / 2,
+        },
+        data: {
+          count: group.descriptors.length,
+          name: group.name,
+          namespace: group.namespace,
+        },
+        style: { width: NAMESPACE_WIDTH, height: NAMESPACE_HEIGHT },
+        draggable: false,
+        selectable: false,
+        ariaLabel: `${group.name}, ${group.descriptors.length} managed resource${
+          group.descriptors.length === 1 ? '' : 's'
+        }`,
+      });
+      edges.push({
+        id: `replication-namespace-${groupIndex}`,
+        source: sourceId,
+        target: namespaceId,
+        type: 'smoothstep',
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#1976d2' },
+        style: { stroke: '#1976d2', strokeWidth: 1.75 },
+      });
+
+      group.descriptors.forEach((descriptor, index) => {
+        const column = Math.floor(index / RESOURCES_PER_COLUMN);
+        const row = index % RESOURCES_PER_COLUMN;
+        addManagedObject(
+          descriptor,
+          descriptorIndex,
+          {
+            x: targetX + NAMESPACE_STEP_X + column * 295,
+            y: targetStartY + groupOffsetY + row * RESOURCE_STEP_Y,
+          },
+          namespaceId
+        );
+        descriptorIndex += 1;
+      });
+
+      groupOffsetY += groupHeight + NAMESPACE_GROUP_GAP_Y;
+    });
+  } else {
+    applied.forEach((descriptor, index) => {
+      const column = Math.floor(index / RESOURCES_PER_COLUMN);
+      const row = index % RESOURCES_PER_COLUMN;
+      addManagedObject(descriptor, index, {
+        x: targetX + column * 295,
+        y: targetStartY + row * RESOURCE_STEP_Y,
+      });
+    });
+  }
 
   return { nodes, edges };
 }
@@ -392,11 +557,17 @@ export function ManagedResourceFlow({
     () => buildManagedResourceFlowGraph(item, applied, resources, selectedKey, dependencies),
     [item, applied, resources, selectedKey, dependencies]
   );
+  const groupByNamespace = objectKind(objectData(item)) === 'GlobalTenantResource';
+  const namespaceGroups = groupByNamespace ? groupManagedResourcesByNamespace(applied) : [];
+  const targetHeight = groupByNamespace
+    ? namespaceGroupsHeight(namespaceGroups)
+    : Math.min(applied.length, RESOURCES_PER_COLUMN) * RESOURCE_STEP_Y + 58;
   const height = Math.min(
-    590,
+    groupByNamespace ? 720 : 590,
     Math.max(
       330,
-      Math.max(Math.min(applied.length, 4), Math.min(dependencies.length, 4)) * 108 + 58
+      targetHeight,
+      Math.min(dependencies.length, DEPENDENCIES_PER_COLUMN) * DEPENDENCY_STEP_Y + 58
     )
   );
 
@@ -404,16 +575,22 @@ export function ManagedResourceFlow({
     <Stack spacing={1}>
       <Stack direction="row" alignItems="baseline" justifyContent="space-between" spacing={2}>
         <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            Replication flow
-          </Typography>
+          <AnchoredSubheading
+            title="Replication flow"
+            variant="subtitle1"
+            sx={{ fontWeight: 600 }}
+          />
           <Typography variant="body2" color="text.secondary">
+            {groupByNamespace && 'Managed resources are grouped by Namespace. '}
             Select a managed resource to inspect its server-side apply diff.
           </Typography>
         </Box>
         <Stack direction="row" spacing={0.75}>
           {dependencies.length > 0 && (
             <Chip size="small" color="primary" label={`${dependencies.length} dependencies`} />
+          )}
+          {groupByNamespace && namespaceGroups.length > 0 && (
+            <Chip size="small" color="primary" label={`${namespaceGroups.length} namespaces`} />
           )}
           <Chip size="small" label={`${applied.length} managed`} />
         </Stack>
