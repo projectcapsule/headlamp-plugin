@@ -146,13 +146,11 @@ replace it with API- and verb-scoped roles there.
 ## Overview dashboard
 
 - `src/components/overview/CapsuleOverview.tsx` renders four semantic summary
-  rows: Tenant (3 cards), Quotas (4 cards), Replications (3 cards), and a split
-  Permits/Proxy row (1 card each). Permits summarizes ResourcePermit lifecycle in
-  the selected Namespace scope and preserves that scope when opened.
+  rows: Tenant (3 cards), Quotas (4 cards), Replications (3 cards), and a Proxy row (1 card).
 - The twelve dedicated panels are Tenants, Managed Namespaces, Tenant Owners,
   Resource Pools, Custom Quotas, Global Custom Quotas, Global Resource Quotas,
   Tenant Resources, Global Tenant Resources, Managed Resources, and Global
-  Proxy Settings, plus Resource Permits.
+  Proxy Settings.
 - `src/components/overview/overviewStats.ts` contains the tested readiness,
   quota-health, and ResourcePool aggregation logic.
 - `src/resources/resourcePools.ts` models both cluster-scoped ResourcePools and
@@ -408,12 +406,11 @@ SCOPE`. The namespaced view counts unique CustomQuota namespaces; the global
   `/customresources/:crd/:namespace/:crName`; cluster-scoped objects use `-` for
   the namespace segment.
 - `src/components/common/CapsuleCustomResourceDetail.tsx` is only an adapter. It
-  reuses the existing rich list/detail components for ResourcePermit,
-  ResourcePermitTemplate, GlobalResourcePermitTemplate, Tenant, TenantOwner, CustomQuota,
+  reuses the existing rich list/detail components for Tenant, TenantOwner, CustomQuota,
   GlobalCustomQuota, GlobalResourceQuota, GlobalProxySettings,
   CapsuleConfiguration, ResourcePool, TenantResource, and GlobalTenantResource.
   Do not create a second implementation for CRD routes.
-- Literal list and instance routes for those thirteen CRDs are registered before
+- Literal list and instance routes for those ten CRDs are registered before
   Headlamp's generic `:crd` routes. Thus the Custom Resources navigation,
   Capsule overview tiles, sidebar leaves, and direct CR instance URLs all use
   the same plugin UI. The older `/capsule/...` list/detail routes remain aliases
@@ -560,246 +557,23 @@ links configured` filler. An empty selection means **No Tenant Filter** and
   in Headlamp's detail header and the current state remains in metadata and the
   graph.
 - The main Capsule sidebar entry is labeled **Tenants** and groups nested
-  `Tenant`, `Quotas`, `Replications`, and `Permits` sections. `Permits` contains
-  Requests and Templates. Keep route sidebar IDs attached to their leaf entry
+  `Tenant`, `Quotas`, `Replications`, `Proxy`, and `Settings` sections. Keep route sidebar IDs attached to their leaf entry
   so Headlamp expands the active subsection automatically.
 
-## Permits / Resource Permits
+## Resource Permits addon
 
-- The Capsule v1beta2 Resource Permit API consists of namespaced
-  `ResourcePermit` and `ResourcePermitTemplate` objects plus cluster-scoped
-  `GlobalResourcePermitTemplate` objects. Do not retain or query the retired
-  BreakRequest CRDs. The nested **Tenants → Permits** navigation group exposes
-  **Requests** and **Templates**. The Templates leaf is a combined
-  catalog of readable namespaced and global templates with explicit Scope and
-  Namespace Availability columns. Query both APIs independently: a denied or
-  empty namespaced API must not suppress global results, and vice versa. Both
-  kinds also retain their canonical rich list/detail routes. Keep Approvers out
-  of template overview tables; approval subjects belong in the detail view.
-- `src/resources/resourcePermits.ts` provides direct v1beta2 resource classes.
-  The dedicated lists and details must use those API endpoints and must not
-  depend on permission to read CustomResourceDefinitions. Their literal
-  canonical routes and `/capsule/...` aliases reuse the same page components.
-  The API plurals are `resourcepermits`, `resourcepermittemplates`, and
-  `globalresourcepermittemplates`. The matching Capsule CRDs and proxy policies
-  must be migrated with the backend; do not fall back to retired lease APIs.
-- ResourcePermit users commonly receive namespaced access through Tenant
-  RoleBindings without permission for a cluster-wide list. `ResourcePermitList`
-  therefore parses Headlamp's space-delimited `?namespace=` filter and passes
-  the explicit Namespace array to `ResourcePermit.useList`; the table renders
-  that same data instead of mounting a second unscoped resource-class query.
-  Do not restore a bare `ResourcePermit.useList()` or a `ResourceListView`
-  `resourceClass` fetch on this page, because either can call the all-Namespaces
-  endpoint and return Forbidden for otherwise-authorized Tenant owners.
-  Dedicated overview inventories for namespaced Capsule resources do not show
-  Headlamp's table-header Namespace picker. Namespace scope continues to come
-  from the global Tenant/Namespace selection and remains visible in the table's
-  Namespace column.
-- `CapsuleEventHub.tsx` registers the Capsule bell in Headlamp's app bar. It is
-  deliberately ResourcePermit-only: do not add a broad Kubernetes Event watch or
-  actor-annotation contract. Resolve the signed-in username and groups with
-  `SelfSubjectReview`. For the exact `spec.requestor`, include only Active,
-  Approved, Denied, and Expired transitions. For an explicit manual
-  `status.request.approvals.approvers` User, Group, or ServiceAccount matching the
-  current username/groups, include only the Requested transition; automatic and
-  empty approval policies do not create reviewer events. Consider only the final
-  entry of the append-only `status.transitions` array for each ResourcePermit, so
-  stale lifecycle stages never remain as separate notifications. Transition
-  items link to the rich request page, actor identities link to their Subject
-  activity, and a Requested reviewer item opens the existing right-side Review
-  activity while the request remains reviewable. The top relative-timeframe
-  selector filters both audiences to 1 hour, 24 hours, 7 days, 30 days, or all
-  time, defaulting to 24 hours. The adjacent event-type selector offers All
-  events, Action required (reviewer), and Informational (requestor); do not
-  restore the Namespace-count chip.
-  The primary ResourcePermit watch is independent of the current page filter and
-  spans all Headlamp-permitted Namespaces, ensuring cluster-level reviewers see
-  actionable requests outside their selected scope. If that list is forbidden,
-  fall back to the active global Namespace set or the Catalog's space-delimited
-  `?namespace=` query for restricted Tenant users. Surface list/RBAC failures
-  only when neither query succeeds.
-- `ResourcePermitDetail.tsx` keeps Conditions and Events first, then request
-  lifecycle, parameters, and the visual chronological audit timeline. Timeline
-  stages use distinct filled/tinted colors for quick scanning. Timeline cards
-  consume the append-only `status.transitions` array in API order and display
-  each transition's own type, authenticated actor, reason, message, timestamp,
-  and optional Kubernetes event time. Never reconstruct lifecycle history from
-  metadata, `status.conditions`, review fields, or the execution identity;
-  conditions are operational state only. Transition actors link to their
-  correlated Subject activity. Planned lifecycle markers are separate from
-  `resourcePermitAuditTrail()`: an Approved request whose
-  `status.request.startTime` is still in the future and has no Active transition
-  shows scheduled **Active**, while `status.keepUntil` shows the future
-  retention/deletion milestone as **Archiving**. Their phase-colored dashed branch
-  also renders for Denied requests without `keepUntil`, showing the captured
-  retention policy and **Archive date not yet reported**. Do not invent a date
-  from the denial timestamp: the controller does not currently schedule deletion
-  on denial. `ResourcePermitRetention.tsx` shows the same yellow archive treatment
-  in the review form, using `status.request.keepFor` to distinguish retained
-  requests from immediate deletion after expiry. Missing review snapshots remain
-  explicitly unknown. The dashed branch
-  remains strictly vertical and connected to the left lifecycle spine. Center
-  every node and connector on the same 42px grid spine and stop the connector at
-  the destination node's top edge; it must not enter the node. A calendar
-  milestone is centered on that spine, with the filled **Future lifecycle**
-  label laid out horizontally beside it; do not add a horizontal connector.
-  Preserve the clear spacing break before the scheduled card. Archiving is a
-  presentation-only future milestone; it is not a ResourcePermit API phase or
-  transition.
-  Requested uses a neutral slate phase color, Pending retains its review-warning
-  orange, Expired uses deep orange, and Archiving uses yellow with a dark
-  accessible foreground. A **Review Verdict** summary renders only after
-  status or its matching Approved/Denied transition reports a completed verdict;
-  the normal detail page deliberately does not duplicate rendered resources.
-  The Request and Parameters tables each use an explicit Expand/Collapse action
-  and start collapsed for every newly opened ResourcePermit; Audit Trail and
-  Review Verdict remain visible. ServiceAccount subject links include the
-  request Namespace and the status-reported ServiceAccount Namespace so the
-  correlated drawer can discover both access and execution-identity bindings.
-  Reviewable phases open `ResourcePermitReviewActivity.tsx` as a temporary
-  right-side Headlamp tab from the list, detail, and Subject summary. The tab
-  shows only the resulting per-target live object changes plus the required
-  verdict/comment form; do not restore separate rendered-manifest or unrendered
-  template-source sections. Every resulting-change entry is a collapsed MUI
-  Accordion whose header retains the target identity and Create/Change/No
-  change state. Live comparison projects the current object onto only
-  manifest-owned fields so generated metadata and status are not shown as
-  deletions.
-- `ResourcePermitCLICommand.tsx` renders the copyable terminal alternative in the
-  Review drawer and Retry/Expire confirmations. Keep the commands derived from
-  the exact object identity: `kubectl capsule resource-permit review|retry|expire <name> -n
-<namespace>`. The review command remains interactive so the CLI can present
-  the snapshot and accept approve/deny plus its optional timing flags; do not
-  append transient web-form values.
-- `status.request` is the authoritative controller-resolved review snapshot. It
-  owns the resolved template/version, execution `impersonation`, immutable
-  captured `approvals`, lifecycle values, retention, and rendered `resources`.
-  Detail and review surfaces must use this snapshot rather than reload mutable
-  template policy. `resourcePermitStatusRequest()` deliberately reads only the
-  current `status.request` contract. Approval
-  is disabled until `status.request` exists, even when Ready=True,
-  while Decline remains available. Review submission merge-patches
-  `/status` with the requested phase, optional comment, and optional timing
-  overrides. Never send or infer a reviewer, verdict, transition, approval
-  policy, rendered resource, or execution identity in the browser: admission
-  authenticates the actor and reconstructs those controller-owned fields.
-- ResourcePermit lifecycle actions are first-class controls. Review, Retry, and
-  Expire are separate detail-header actions and separate columns in the main and
-  Subject ResourcePermit tables. Review opens its right-side activity; Retry is
-  available only for Failed requests with `status.failure.retryPhase`, uses an
-  in-application confirmation, and patches only `status.phase: Retrying`.
-  The detail Failure section exposes stage, retry phase, reason, and message. Expire
-  uses a themed in-application confirmation dialog for the irreversible
-  revocation and patches only
-  `status.phase: Expired` on `/status`. The admission webhook reconstructs the
-  previous controller-owned status, and the Expire action is hidden once the
-  terminal phase is reached.
-- Reviewers can adjust the effective Duration and Start time before approval.
-  Initialize both controls from `status.request`, convert the API timestamp to
-  and from the browser-local `datetime-local` value, and include only
-  `status.request.duration/startTime` with the approval transition. A cleared
-  Duration submits explicit `0s` so template defaults cannot replace the
-  reviewer's intentional unlimited window; Start time remains required for an
-  approval. Declines do not submit lifecycle overrides. Rendered resources,
-  keep-for policy, resolved identity, and template identity remain
-  controller-owned and must never be copied into the browser patch.
-  A review comment is optional for approval and must not disable **Submit
-  approval**; omit `status.review.message` when it is blank. Declines continue
-  to require a non-empty comment so their reason remains visible in the audit
-  trail.
-- The ResourcePermit list has a prominent **New ResourcePermit** button that opens
-  `CreateResourcePermitActivity.tsx` on the right. Creation combines namespaced
-  `ResourcePermitTemplate` objects from the selected Namespace scope with
-  `GlobalResourcePermitTemplate` objects reported as available there. Either API
-  may be forbidden without hiding templates returned by the other. The catalog
-  has an AND-style multi-tag Autocomplete plus
-  free-text search across template name, description, and tags; it must not
-  return to an exclusive native template dropdown. Templates render as
-  selectable cards in category grids. The first declared
-  `info.projectcapsule.dev/tags` value is the primary category so a template
-  appears exactly once; remaining tags still filter it, and untagged templates
-  appear last under **Uncategorized**. Selecting a card performs a named GET and
-  passes its unflattened JSON Schema 2020-12 `spec.paramSchema` to the shared
-  RJSF/MUI form with the Ajv 2020 validator. Preserve nested objects and arrays,
-  composition branches, defaults, enums, and native schema constraints. The
-  right-side form is a two-step
-  wizard: **Setup** collects formal request information with optional Reason,
-  then **Template Parameters** shows only schema-derived inputs. Users can submit an exact
-  metadata name or use generated naming, enabled by default, which sends
-  `metadata.generateName`. Success navigates directly to the API-returned
-  concrete object's canonical rich detail and closes only the creation activity.
-  Bordered, tinted panels and increased spacing separate the template, field groups, and
-  final action. Both wizard steps expose an optional **View YAML** action. It
-  must serialize the same `buildCreateResourcePermit()` body used by Create into
-  an in-app preview with Copy and Download controls; previewing or exporting
-  must not submit a request, and the requestor remains absent because admission
-  injects it. An empty request Duration means unlimited access without an
-  expiration timestamp; keep that explicit in the helper text and do not claim
-  an empty value uses `spec.defaultDuration`. Create sends the direct namespaced
-  ResourcePermit API payload without `spec.requestor`; admission must inject the
-  authenticated identity. Template list/get access remains an explicit
-  prerequisite and gets its own diagnostic when denied.
-- `resourcePermitJsonSchema.ts` recursively discovers `x-capsule-form` at the
-  schema root and under JSON Schema 2020-12 containment, composition,
-  conditional, map, and local `$defs`/`definitions` reference paths. Local
-  reference traversal must stop loops. A `kubernetes-resource` extension on a
-  scalar string renders one selected string; an extension on an array item
-  schema renders a multi-select whose form value remains `string[]`, so Ajv
-  continues to enforce `minItems`, `maxItems`, and `uniqueItems`. Treat
-  `x-kubernetes-validations` as an allowed opaque server-side keyword and show
-  any Kubernetes admission error returned on create.
-- Schemas carrying `x-capsule-form.widget: kubernetes-resource` render through
-  `KubernetesResourceSchemaFieldInput.tsx`. It discovers the source
-  `apiVersion`/`kind`, resolves the listable plural resource and namespaced
-  scope, then lists options with the signed-in Headlamp identity. Honor
-  `source.namespace` values `request`, `*`, and literal Namespaces plus both
-  label/field selectors. Omitted Namespace means the ResourcePermit Namespace
-  for namespaced GVKs and cluster scope for cluster-scoped GVKs.
-  `resourcePermitKubernetesResource.ts` owns discovery/list URL construction and
-  browser-safe option rendering. Label/value templates default to
-  `{{ .metadata.name }}` and support static text with Go-template object-path
-  substitutions; never evaluate arbitrary template functions in the browser.
-  A discovery, RBAC, list, missing-key, or unsupported-expression failure is
-  local to that form field and must remain actionable without crashing the
-  wizard. Do not treat visible picker options as an authorization or validation
-  boundary; Capsule remains authoritative.
-- Active requests reuse `ManagedResources` for the animated request-to-resource
-  XY flow, live inventory, and inline SSA inspection. Render it only once a
-  request is Active or the controller reports processed items; pre-approval
-  rendered resource groups are approval data rather than live inventory. On a
-  ResourcePermit, inventory membership comes from `status.processedItems` and its
-  nested `status.status`, `status.message`, and `status.clusterScoped`. Rows stay
-  visible while their live GET is pending or denied; successful watch updates
-  enrich existing rows and subscriptions are closed on unmount. Honor explicit
-  cluster scope even when the descriptor carries its replication Namespace.
-  The detail inventory must bypass Headlamp's global Namespace/Tenant filter:
-  a permit can manage targets outside its own Namespace or selected Tenant.
-  Keep the table's own text search and Namespace/Kind/Ready column filters active.
-  Empty processed items remain empty after pruning. On a ResourcePermit detail,
-  pass `inventoryTitle={null}` so the searchable inventory
-  table follows the diagram directly without a redundant **Managed resource
-  inventory** heading; TR/GTR pages retain their inventory heading.
-- `GlobalResourcePermitTemplateDetail.tsx` provides the shared rich detail for
-  both template kinds: approval mode/subjects/CEL, lifecycle and retention,
-  parameter schema, and every direct or templated resource group. Global
-  templates additionally show resolved Namespace availability as a linked
-  table; namespaced templates use their object Namespace. Templates use
-  the conventional `info.projectcapsule.dev/icon` and
-  `info.projectcapsule.dev/description` annotations as catalog presentation;
-  the icon/description preview appears in the list, create selector, selected
-  template panels, and detail overview. Unsafe icon references are rejected.
-- Request Template details expose the configured `spec.impersonation`
-  ServiceAccount as a linked Subject chip in lifecycle metadata; do not show
-  impersonation in the list overview. When that optional override is absent,
-  show **Capsule default identity** without inventing an exact subject; the
-  concrete default can depend on controller/CapsuleConfiguration state that is
-  not part of the template object.
+ResourcePermit APIs and UI now belong to the standalone Resource Permits addon.
+The plugin lives at `../resource-permits/headlamp/` and uses
+`addons.projectcapsule.dev/v1beta2` with a top-level Permits menu. Requests,
+template catalogs, lifecycle actions, notifications, and permit-specific
+subject/tag correlation are owned there. Do not restore the retired core API
+watches or duplicate those routes in this plugin. Keep generic Capsule subject,
+tag, metadata, and managed-resource helpers here for core consumers.
 
 ## Subject references
 
 - `CapsuleSubjectLink.tsx` is the reusable navigation surface for Capsule and
-  Kubernetes subjects. Tenant owners, TenantOwner identities, ResourcePermit
-  requestors/reviewers/rendered RBAC subjects, request-template approvers,
+  Kubernetes subjects. Tenant owners, TenantOwner identities,
   impersonation ServiceAccounts, and Proxy subjects all link to
   `/capsule/subjects/:kind/:subject`. Preserve the current Namespace query when
   available; a source object may provide a more precise Namespace scope.
@@ -814,18 +588,17 @@ links configured` filler. An empty selection means **No Tenant Filter** and
   `system:serviceaccount:namespace:name` are the same identity, while equal
   ServiceAccount names in different Namespaces remain distinct.
 - `CapsuleSubjectSummary.tsx` correlates every visible Tenant owner/promotion,
-  ResourcePermit requestor/requestor group/reviewer/transition actor/execution
-  ServiceAccount/rendered RBAC subject, native RoleBinding/ClusterRoleBinding subject, GlobalProxySettings
+  native RoleBinding/ClusterRoleBinding subject, GlobalProxySettings
   rule subject, and TenantOwner whose `spec.kind/spec.name` is the exact
   normalized identity. Its relationship-section order is Tenants, Promotions,
-  Tenant Owners, Resource Permits, Global Proxy Settings, then Bindings. Promotions
+  Tenant Owners, Global Proxy Settings, then Bindings. Promotions
   appear only for exact ServiceAccounts reported in `Tenant.status.promotions`.
   Relationship tables and their headings render only when they contain at
   least one hit; API access diagnostics remain independent of those empty
-  sections. Tenant, namespaced RBAC, cluster RBAC, ResourcePermit,
+  sections. Tenant, namespaced RBAC, cluster RBAC,
   GlobalProxySettings, and TenantOwner requests remain independent: show an API-specific access
   diagnostic when one inventory is forbidden and retain any other readable
-  inventories. Namespaced RBAC and ResourcePermit queries must reuse the explicit
+  inventories. Namespaced RBAC queries must reuse the explicit
   `?namespace=` array and must not fall back to a second unscoped list.
 
 ## Capsule resource tags
@@ -845,17 +618,14 @@ links configured` filler. An empty selection means **No Tenant Filter** and
   `/capsule/tags/:tag` route remains available for modified clicks and direct
   URLs. Namespaced links union the source object's Namespace with the current
   `?namespace=` scope; cluster-scoped links preserve the current scope.
-- The tag inventory independently queries all 14 supported Capsule kinds:
-  ResourcePermit, ResourcePermitTemplate, CapsuleConfiguration, CustomQuota,
-  GlobalResourcePermitTemplate, GlobalCustomQuota, GlobalProxySettings,
+- The tag inventory independently queries all 11 supported Capsule kinds:
+  CapsuleConfiguration, CustomQuota, GlobalCustomQuota, GlobalProxySettings,
   GlobalResourceQuota, GlobalTenantResource, ResourcePool, ResourcePoolClaim,
   Tenant, TenantOwner, and TenantResource. One forbidden or optional API must
   produce a concise partial-access diagnostic without hiding results from
   readable APIs. Rows link to canonical rich resource details.
-- README metadata documentation covers shared tags and includes a valid
-  `ResourcePermitTemplate` example showing that both template kinds support
-  `info.projectcapsule.dev/icon` and `info.projectcapsule.dev/description` also
-  drive template list, detail, and New ResourcePermit catalog presentation.
+- README metadata documentation covers shared tags, icons, and descriptions.
+  ResourcePermit template metadata and catalog documentation live in the addon.
 
 ## TenantOwner pages
 
@@ -1741,3 +1511,25 @@ future agents. Update them whenever the environment changes.
   RoleBinding responses. No cluster objects or permissions were changed.
   Playground reload/status confirmed Headlamp Ready and matching local/pod
   SHA-256 `d74ad7585e3160f18d6ef70e4f0624ad93a47a5784324217faa3dc3acc26d28e`.
+- On 2026-10-09, the ResourcePermit creation wizard switched its request
+  Namespace selector to the signed-in identity's Namespace list. Global
+  creation templates no longer depend on `status.namespaces` for catalog
+  visibility. Formatting, lint, TypeScript, all 291 tests across 62 files, and
+  the production build passed. The Flux playground runs Headlamp chart 0.45.0;
+  reload/status confirmed a Ready pod and matching local, injected, and
+  browser-served SHA-256
+  `89d64084f2c413b8cc21ef987608ab5f4a674e60c6a1fccafc76d541e29b2dcb`.
+  Alice's real Namespace list was empty, and both template selectors correctly
+  remained disabled. Browser-local permit and populated Namespace fixtures
+  verified identical visible choices for Grafana and ClusterRole bindings,
+  including a nonmatching active Namespace filter and template status. No
+  browser errors or permit mutations occurred. This recreated cluster lacks
+  all three ResourcePermit CRDs, so real request creation remains unavailable.
+  The Headlamp HelmRelease remains suspended for the development injection.
+
+## Resource Permits extraction (2026-10-12)
+
+The standalone addon UI owns the three permit CRDs and their canonical and
+legacy routes, the notification bell, and lifecycle actions. Capsule no longer
+queries those APIs in its overview, subject drawer, or tag inventory. Historical
+verification entries above retain the names and layout in use at the time.

@@ -5,7 +5,6 @@ import { useMemo } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { GlobalProxySettings } from '../../resources/globalProxySettings';
-import { ResourcePermit } from '../../resources/resourcePermits';
 import { TenantOwner } from '../../resources/tenantOwners';
 import { Tenants } from '../../resources/tenants';
 import { AnchoredSectionBox as SectionBox } from '../common/AnchoredSectionBox';
@@ -13,11 +12,7 @@ import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { StatCard } from '../common/StatCard';
 import { SummaryCardGrid } from '../common/SummaryCardGrid';
 import { globalProxyReadyCondition } from '../proxy/globalProxySettingsHelpers';
-import { ResourcePermitExpireButton } from '../resource-permits/ResourcePermitExpireAction';
-import { resourcePermitNamespacesFromSearch } from '../resource-permits/resourcePermitHelpers';
-import { ResourcePermitPhaseChip } from '../resource-permits/ResourcePermitPhaseChip';
-import { ResourcePermitRetryButton } from '../resource-permits/ResourcePermitRetryAction';
-import { ResourcePermitReviewButton } from '../resource-permits/ResourcePermitReviewActivity';
+import { capsuleTagNamespacesFromSearch } from '../tags/capsuleTags';
 import { tenantOwnerReportedTenantNames } from '../tenant-owners/tenantOwnerReferences';
 import {
   bindingMentionsSubject,
@@ -25,7 +20,6 @@ import {
   capsuleSubjectLabel,
   globalProxySettingsSubjectMentions,
   normalizeCapsuleSubject,
-  resourcePermitSubjectMentions,
   tenantOwnerMentionsSubject,
   tenantPromotionsForSubject,
   tenantSubjectMentions,
@@ -67,7 +61,7 @@ export function CapsuleSubjectSummary(props: CapsuleSubjectSummaryProps = {}) {
     name: props.name || decoded(params.subject) || 'Unknown',
   };
   const namespaces = useMemo(
-    () => props.namespaces ?? resourcePermitNamespacesFromSearch(location.search),
+    () => props.namespaces ?? capsuleTagNamespacesFromSearch(location.search),
     [location.search, props.namespaces]
   );
   const namespaceScope = namespaces.length > 0 ? namespaces : undefined;
@@ -79,9 +73,6 @@ export function CapsuleSubjectSummary(props: CapsuleSubjectSummaryProps = {}) {
   });
   const [clusterRoleBindings, clusterRoleBindingsError] =
     K8s.ResourceClasses.ClusterRoleBinding.useList();
-  const [resourcePermits, resourcePermitsError] = ResourcePermit.useList({
-    namespace: namespaceScope,
-  });
 
   const tenantRows = useMemo(
     () =>
@@ -124,19 +115,7 @@ export function CapsuleSubjectSummary(props: CapsuleSubjectSummaryProps = {}) {
       ),
     [clusterRoleBindings, roleBindings, subject]
   );
-  const requestRows = useMemo(
-    () =>
-      (resourcePermits || [])
-        .map(item => ({ item, mentions: resourcePermitSubjectMentions(item, subject) }))
-        .filter(row => row.mentions.length > 0)
-        .sort(
-          (left, right) =>
-            String(left.item.getNamespace() || '').localeCompare(
-              String(right.item.getNamespace() || '')
-            ) || left.item.getName().localeCompare(right.item.getName())
-        ),
-    [resourcePermits, subject]
-  );
+
   const tenantOwnerRows = useMemo(
     () =>
       (tenantOwners || [])
@@ -175,7 +154,6 @@ export function CapsuleSubjectSummary(props: CapsuleSubjectSummaryProps = {}) {
     (!tenants && !tenantsError) ||
     (!tenantOwners && !tenantOwnersError) ||
     (!globalProxySettings && !globalProxySettingsError) ||
-    (!resourcePermits && !resourcePermitsError) ||
     (!roleBindings && !roleBindingsError) ||
     (!clusterRoleBindings && !clusterRoleBindingsError);
 
@@ -214,17 +192,7 @@ export function CapsuleSubjectSummary(props: CapsuleSubjectSummaryProps = {}) {
             </Typography>
           }
         />
-        <StatCard
-          label="BREAK REQUESTS"
-          total={resourcePermitsError ? 'Unavailable' : requestRows.length}
-          segments={[{ name: 'Requests', value: requestRows.length, color: '#ed6c02' }]}
-          chips={[{ label: `${requestRows.length} Visible`, color: 'warning' }]}
-          footer={
-            <Typography variant="caption" color="text.secondary">
-              Requestor, reviewer, access identity, or rendered subject
-            </Typography>
-          }
-        />
+
         <StatCard
           label="BINDINGS"
           total={roleBindingsError && clusterRoleBindingsError ? 'Unavailable' : bindingRows.length}
@@ -257,12 +225,7 @@ export function CapsuleSubjectSummary(props: CapsuleSubjectSummaryProps = {}) {
           signed-in account is allowed to list.
         </Alert>
       )}
-      {resourcePermitsError && (
-        <Alert severity="info" sx={{ mb: 1.5 }}>
-          ResourcePermits are unavailable in {scopedDescription}. Kubernetes only returns references
-          this signed-in account is allowed to list.
-        </Alert>
-      )}
+
       {globalProxySettingsError && (
         <Alert severity="info" sx={{ mb: 1.5 }}>
           GlobalProxySettings are unavailable. Capsule Proxy may not be installed, or this account
@@ -410,68 +373,6 @@ export function CapsuleSubjectSummary(props: CapsuleSubjectSummaryProps = {}) {
             ]}
             data={tenantOwnerRows}
             emptyMessage=""
-            reflectInURL={false}
-          />
-        </SectionBox>
-      )}
-
-      {requestRows.length > 0 && (
-        <SectionBox title="Resource Permits">
-          <SimpleTable
-            columns={[
-              {
-                label: 'Request',
-                getter: (row: (typeof requestRows)[number]) => (
-                  <CapsuleResourceLink
-                    crd={CAPSULE_CRDS.ResourcePermit}
-                    name={row.item.getName()}
-                    namespace={row.item.getNamespace()}
-                  >
-                    {row.item.getName()}
-                  </CapsuleResourceLink>
-                ),
-              },
-              {
-                label: 'Namespace',
-                getter: (row: (typeof requestRows)[number]) => row.item.getNamespace() || '—',
-              },
-              {
-                label: 'Phase',
-                getter: (row: (typeof requestRows)[number]) => (
-                  <ResourcePermitPhaseChip item={row.item} />
-                ),
-              },
-              {
-                label: 'Relationship',
-                getter: (row: (typeof requestRows)[number]) => (
-                  <MentionChips mentions={row.mentions} />
-                ),
-              },
-              {
-                label: 'Reason',
-                getter: (row: (typeof requestRows)[number]) => row.item.spec?.reason || '—',
-              },
-              {
-                label: 'Review',
-                getter: (row: (typeof requestRows)[number]) => (
-                  <ResourcePermitReviewButton item={row.item} />
-                ),
-              },
-              {
-                label: 'Retry',
-                getter: (row: (typeof requestRows)[number]) => (
-                  <ResourcePermitRetryButton item={row.item} />
-                ),
-              },
-              {
-                label: 'Expire',
-                getter: (row: (typeof requestRows)[number]) => (
-                  <ResourcePermitExpireButton item={row.item} />
-                ),
-              },
-            ]}
-            data={requestRows}
-            emptyMessage="No visible ResourcePermit mentions this subject."
             reflectInURL={false}
           />
         </SectionBox>

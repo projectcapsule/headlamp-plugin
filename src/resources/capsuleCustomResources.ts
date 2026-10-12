@@ -1,9 +1,6 @@
 export const CAPSULE_CRDS = {
-  ResourcePermit: 'resourcepermits.capsule.clastix.io',
-  ResourcePermitTemplate: 'resourcepermittemplates.capsule.clastix.io',
   CapsuleConfiguration: 'capsuleconfigurations.capsule.clastix.io',
   CustomQuota: 'customquotas.capsule.clastix.io',
-  GlobalResourcePermitTemplate: 'globalresourcepermittemplates.capsule.clastix.io',
   GlobalCustomQuota: 'globalcustomquotas.capsule.clastix.io',
   GlobalProxySettings: 'globalproxysettings.capsule.clastix.io',
   GlobalResourceQuota: 'globalresourcequotas.capsule.clastix.io',

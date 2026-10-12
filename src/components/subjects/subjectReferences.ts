@@ -1,8 +1,3 @@
-import type { ResourcePermitAccessEntity } from '../../resources/resourcePermits';
-import {
-  resourcePermitStatusRequest,
-  resourcePermitTransitions,
-} from '../resource-permits/resourcePermitHelpers';
 import {
   type PromotedServiceAccount,
   tenantPromotedServiceAccounts,
@@ -62,7 +57,7 @@ export function normalizeCapsuleSubject(subject: {
 }
 
 export function capsuleSubjectFromAccessEntity(
-  entity?: ResourcePermitAccessEntity
+  entity?: CapsuleAccessEntity
 ): CapsuleSubject | undefined {
   if (!entity) return undefined;
   return normalizeCapsuleSubject({ kind: entity.type, name: entity.name });
@@ -103,14 +98,6 @@ export function capsuleSubjectsEqual(
   right: CapsuleSubject | undefined
 ): boolean {
   return !!left && !!right && capsuleSubjectKey(left) === capsuleSubjectKey(right);
-}
-
-function accessEntityMentionsSubject(
-  entity: ResourcePermitAccessEntity | undefined,
-  subject: CapsuleSubject
-): boolean {
-  if (capsuleSubjectsEqual(capsuleSubjectFromAccessEntity(entity), subject)) return true;
-  return subject.kind === 'Group' && !!entity?.groups?.some(group => group === subject.name);
 }
 
 /** Every place where a Tenant refers to the selected subject. */
@@ -197,34 +184,9 @@ export function globalProxySettingsSubjectMentions(
   return [...mentions];
 }
 
-/** Every place where a ResourcePermit refers to the selected subject. */
-export function resourcePermitSubjectMentions(request: any, subject: CapsuleSubject): string[] {
-  const data = objectData(request);
-  const mentions = new Set<string>();
-  const isRequestor = accessEntityMentionsSubject(data.spec?.requestor, subject);
-  if (isRequestor) mentions.add('Requestor');
-  if (accessEntityMentionsSubject(data.status?.review?.reviewer, subject)) mentions.add('Reviewer');
-
-  for (const transition of resourcePermitTransitions(data)) {
-    if (!capsuleSubjectsEqual(normalizeCapsuleSubject(transition.actor), subject)) continue;
-    if (transition.type === 'Approved' || transition.type === 'Denied') {
-      mentions.add('Reviewer');
-    } else if (!isRequestor || (transition.type !== 'Created' && transition.type !== 'Requested')) {
-      mentions.add(`${transition.type} actor`);
-    }
-  }
-
-  const statusRequest = resourcePermitStatusRequest(data);
-  const serviceAccount = capsuleSubjectFromServiceAccountReference(statusRequest?.impersonation);
-  if (capsuleSubjectsEqual(serviceAccount, subject)) mentions.add('Execution ServiceAccount');
-
-  for (const resource of statusRequest?.resources || []) {
-    for (const target of resource.targets || []) {
-      if (manifestSubjects(target).some(candidate => capsuleSubjectsEqual(candidate, subject))) {
-        mentions.add(`Rendered ${target.kind || 'resource'} subject`);
-      }
-    }
-  }
-
-  return [...mentions];
+/** Shared Capsule identity representation used by subject navigation. */
+export interface CapsuleAccessEntity {
+  groups?: string[];
+  name?: string;
+  type?: string;
 }

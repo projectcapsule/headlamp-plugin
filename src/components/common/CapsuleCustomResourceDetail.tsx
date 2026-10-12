@@ -11,14 +11,6 @@ import { GlobalResourceQuotaDetail } from '../quotas/GlobalResourceQuotaDetail';
 import { GlobalResourceQuotasList } from '../quotas/GlobalResourceQuotaList';
 import { ResourcePoolDetail } from '../quotas/ResourcePoolDetail';
 import { ResourcePoolsList } from '../quotas/ResourcePoolList';
-import {
-  GlobalResourcePermitTemplateDetail,
-  ResourcePermitTemplateDetail,
-} from '../resource-permits/GlobalResourcePermitTemplateDetail';
-import { GlobalResourcePermitTemplatesList } from '../resource-permits/GlobalResourcePermitTemplateList';
-import { ResourcePermitDetail } from '../resource-permits/ResourcePermitDetail';
-import { ResourcePermitsList } from '../resource-permits/ResourcePermitList';
-import { ResourcePermitTemplatesList } from '../resource-permits/ResourcePermitTemplateList';
 import { TenantOwnerDetail } from '../tenant-owners/TenantOwnerDetail';
 import { TenantOwnersList } from '../tenant-owners/TenantOwnerList';
 import { GlobalTenantResourceDetail } from '../tenant-resources/GlobalTenantResourceDetail';
@@ -29,13 +21,10 @@ import { TenantDetail } from '../tenants/TenantDetail';
 import { TenantsList } from '../tenants/TenantList';
 
 export type CapsuleCustomResourceDetailKind =
-  | 'ResourcePermit'
-  | 'ResourcePermitTemplate'
   | 'CapsuleConfiguration'
   | 'CustomQuota'
   | 'GlobalCustomQuota'
   | 'GlobalProxySettings'
-  | 'GlobalResourcePermitTemplate'
   | 'GlobalResourceQuota'
   | 'GlobalTenantResource'
   | 'ResourcePool'
@@ -49,10 +38,6 @@ export function CapsuleCustomResourceDetail({ kind }: { kind: CapsuleCustomResou
   const objectNamespace = namespace === '-' ? undefined : namespace;
 
   switch (kind) {
-    case 'ResourcePermit':
-      return <ResourcePermitDetail name={crName} namespace={objectNamespace} />;
-    case 'ResourcePermitTemplate':
-      return <ResourcePermitTemplateDetail name={crName} namespace={objectNamespace} />;
     case 'CapsuleConfiguration':
       return <CapsuleConfigurationDetail name={crName} />;
     case 'Tenant':
@@ -63,8 +48,7 @@ export function CapsuleCustomResourceDetail({ kind }: { kind: CapsuleCustomResou
       return <CustomQuotaDetail name={crName} namespace={objectNamespace} />;
     case 'GlobalCustomQuota':
       return <GlobalCustomQuotaDetail name={crName} />;
-    case 'GlobalResourcePermitTemplate':
-      return <GlobalResourcePermitTemplateDetail name={crName} />;
+
     case 'GlobalProxySettings':
       return <GlobalProxySettingsDetail name={crName} />;
     case 'GlobalResourceQuota':
@@ -81,10 +65,6 @@ export function CapsuleCustomResourceDetail({ kind }: { kind: CapsuleCustomResou
 /** Reuses each plugin overview at the canonical Headlamp CRD list URL. */
 export function CapsuleCustomResourceList({ kind }: { kind: CapsuleCustomResourceDetailKind }) {
   switch (kind) {
-    case 'ResourcePermit':
-      return <ResourcePermitsList />;
-    case 'ResourcePermitTemplate':
-      return <ResourcePermitTemplatesList />;
     case 'CapsuleConfiguration':
       return <CapsuleConfigurationList />;
     case 'Tenant':
@@ -95,8 +75,7 @@ export function CapsuleCustomResourceList({ kind }: { kind: CapsuleCustomResourc
       return <CustomQuotasList />;
     case 'GlobalCustomQuota':
       return <GlobalCustomQuotasList />;
-    case 'GlobalResourcePermitTemplate':
-      return <GlobalResourcePermitTemplatesList />;
+
     case 'GlobalProxySettings':
       return <GlobalProxySettingsList />;
     case 'GlobalResourceQuota':

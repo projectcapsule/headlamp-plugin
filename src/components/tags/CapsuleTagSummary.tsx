@@ -7,11 +7,6 @@ import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
 import { CustomQuota, GlobalCustomQuota } from '../../resources/customQuotas';
 import { GlobalProxySettings } from '../../resources/globalProxySettings';
 import { GlobalResourceQuota } from '../../resources/globalResourceQuotas';
-import {
-  GlobalResourcePermitTemplate,
-  ResourcePermit,
-  ResourcePermitTemplate,
-} from '../../resources/resourcePermits';
 import { ResourcePool, ResourcePoolClaim } from '../../resources/resourcePools';
 import { TenantOwner } from '../../resources/tenantOwners';
 import { GlobalTenantResource, TenantResource } from '../../resources/tenantResources';
@@ -34,11 +29,8 @@ interface ResourceInventory {
 }
 
 const CAPSULE_CRD_BY_KIND: Record<string, string> = {
-  ResourcePermit: CAPSULE_CRDS.ResourcePermit,
-  ResourcePermitTemplate: CAPSULE_CRDS.ResourcePermitTemplate,
   CapsuleConfiguration: CAPSULE_CRDS.CapsuleConfiguration,
   CustomQuota: CAPSULE_CRDS.CustomQuota,
-  GlobalResourcePermitTemplate: CAPSULE_CRDS.GlobalResourcePermitTemplate,
   GlobalCustomQuota: CAPSULE_CRDS.GlobalCustomQuota,
   GlobalProxySettings: CAPSULE_CRDS.GlobalProxySettings,
   GlobalResourceQuota: CAPSULE_CRDS.GlobalResourceQuota,
@@ -88,15 +80,9 @@ export function CapsuleTagSummary(props: CapsuleTagSummaryProps = {}) {
   );
   const namespaceScope = namespaces.length > 0 ? namespaces : undefined;
 
-  const [resourcePermits, resourcePermitsError] = ResourcePermit.useList({
-    namespace: namespaceScope,
-  });
-  const [resourcePermitTemplates, resourcePermitTemplatesError] = ResourcePermitTemplate.useList({
-    namespace: namespaceScope,
-  });
   const [capsuleConfigurations, capsuleConfigurationsError] = CapsuleConfiguration.useList();
   const [customQuotas, customQuotasError] = CustomQuota.useList({ namespace: namespaceScope });
-  const [templates, templatesError] = GlobalResourcePermitTemplate.useList();
+
   const [globalCustomQuotas, globalCustomQuotasError] = GlobalCustomQuota.useList();
   const [globalProxySettings, globalProxySettingsError] = GlobalProxySettings.useList();
   const [globalResourceQuotas, globalResourceQuotasError] = GlobalResourceQuota.useList();
@@ -113,16 +99,6 @@ export function CapsuleTagSummary(props: CapsuleTagSummaryProps = {}) {
 
   const inventories: ResourceInventory[] = [
     {
-      error: resourcePermitsError,
-      items: resourcePermits,
-      kind: 'ResourcePermit',
-    },
-    {
-      error: resourcePermitTemplatesError,
-      items: resourcePermitTemplates,
-      kind: 'ResourcePermitTemplate',
-    },
-    {
       error: capsuleConfigurationsError,
       items: capsuleConfigurations,
       kind: 'CapsuleConfiguration',
@@ -132,11 +108,7 @@ export function CapsuleTagSummary(props: CapsuleTagSummaryProps = {}) {
       items: customQuotas,
       kind: 'CustomQuota',
     },
-    {
-      error: templatesError,
-      items: templates,
-      kind: 'GlobalResourcePermitTemplate',
-    },
+
     {
       error: globalCustomQuotasError,
       items: globalCustomQuotas,

@@ -3,11 +3,9 @@ import { CapsuleTagChips } from './CapsuleTagChips';
 import { capsuleResourceTags } from './capsuleTags';
 
 const CAPSULE_RESOURCE_TABLE_IDS = new Set([
-  'capsule-resource-permits',
-  'capsule-resource-permit-templates',
   'capsule-configurations',
   'capsule-custom-quotas',
-  'capsule-global-resource-permit-templates',
+
   'capsule-global-custom-quotas',
   'capsule-global-proxy-settings',
   'capsule-global-resource-quotas',
