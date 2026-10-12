@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ResourcePermitSetupForm } from './CreateResourcePermitActivity';
+import { CreateResourcePermit, ResourcePermitSetupForm } from './CreateResourcePermitActivity';
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(),
   post: vi.fn(),
   push: vi.fn(),
   enqueueSnackbar: vi.fn(),
+  namespaceList: vi.fn(),
+  globalTemplateList: vi.fn(),
+  namespacedTemplateList: vi.fn(),
   template: {
     spec: { paramSchema: { type: 'object', properties: {} } },
     status: { namespaces: ['*'] },
@@ -16,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@kinvolk/headlamp-plugin/lib', () => ({
   Activity: { close: mocks.close },
   ApiProxy: { post: mocks.post },
+  K8s: { ResourceClasses: { Namespace: { useList: mocks.namespaceList } } },
   Router: {
     createRouteURL: (_: string, p: any) =>
       `/c/${p.cluster}/customresources/${p.crd}/${p.namespace}/${p.crName}`,
@@ -24,8 +28,14 @@ vi.mock('@kinvolk/headlamp-plugin/lib', () => ({
 vi.mock('react-router-dom', () => ({ useHistory: () => ({ push: mocks.push }) }));
 vi.mock('notistack', () => ({ useSnackbar: () => ({ enqueueSnackbar: mocks.enqueueSnackbar }) }));
 vi.mock('../../resources/resourcePermits', () => ({
-  GlobalResourcePermitTemplate: { useGet: () => [mocks.template, null] },
-  ResourcePermitTemplate: { useGet: () => [mocks.template, null] },
+  GlobalResourcePermitTemplate: {
+    useGet: () => [mocks.template, null],
+    useList: mocks.globalTemplateList,
+  },
+  ResourcePermitTemplate: {
+    useGet: () => [mocks.template, null],
+    useList: mocks.namespacedTemplateList,
+  },
 }));
 vi.mock('../common/AnchoredSectionBox', () => ({
   AnchoredSectionBox: ({ children }: any) => <div>{children}</div>,
@@ -42,7 +52,135 @@ vi.mock('./KubernetesResourceSchemaFieldInput', () => ({
 }));
 
 describe('ResourcePermit setup', () => {
-  beforeEach(() => vi.clearAllMocks());
+  const visibleNamespaces = (names: string[]) => names.map(name => ({ getName: () => name }));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.template.status = { namespaces: ['*'] };
+    mocks.namespaceList.mockReturnValue([visibleNamespaces(['solar-test']), null]);
+    mocks.globalTemplateList.mockReturnValue([[], null]);
+    mocks.namespacedTemplateList.mockReturnValue([[], null]);
+  });
+
+  it.each([
+    { reported: ['*'], scope: [] },
+    { reported: ['unseen-namespace'], scope: ['solar-test'] },
+    { reported: [], scope: ['solar-test'] },
+    { reported: undefined, scope: [] },
+  ])(
+    'lists only visible namespaces with template availability $reported',
+    ({ reported, scope }) => {
+      mocks.template.status = { namespaces: reported as any };
+      mocks.namespaceList.mockReturnValue([
+        visibleNamespaces(['solar-test', 'solar-dev', 'solar-test']),
+        null,
+      ]);
+      render(
+        <ResourcePermitSetupForm
+          cluster="main"
+          namespaces={scope}
+          templateKind="GlobalResourcePermitTemplate"
+          templateName="grafana"
+        />
+      );
+      expect(mocks.namespaceList).toHaveBeenCalledWith({ cluster: 'main' });
+      fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Namespace' }));
+      expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual([
+        'solar-dev',
+        'solar-test',
+      ]);
+      expect(screen.queryByRole('textbox', { name: 'Namespace' })).toBeNull();
+    }
+  );
+
+  it('uses the same visible namespace list for a namespaced template', () => {
+    mocks.namespaceList.mockReturnValue([visibleNamespaces(['solar-dev', 'solar-test']), null]);
+    render(
+      <ResourcePermitSetupForm
+        cluster="main"
+        namespaces={['solar-test']}
+        templateKind="ResourcePermitTemplate"
+        templateName="access"
+        templateNamespace="unseen-namespace"
+      />
+    );
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Namespace' }));
+    expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual([
+      'solar-dev',
+      'solar-test',
+    ]);
+  });
+
+  it.each([
+    { items: null, error: null, message: 'Loading visible Namespaces…' },
+    { items: [], error: null, message: 'No Namespaces are visible to this account.' },
+    {
+      items: null,
+      error: new Error('Forbidden'),
+      message: 'Visible Namespaces could not be loaded. Check Namespace list access.',
+    },
+  ])('keeps a disabled selector when $message', ({ items, error, message }) => {
+    mocks.namespaceList.mockReturnValue([items, error]);
+    render(
+      <ResourcePermitSetupForm
+        cluster="main"
+        namespaces={['solar-test']}
+        templateKind="GlobalResourcePermitTemplate"
+        templateName="grafana"
+      />
+    );
+    expect(screen.getByRole('combobox', { name: 'Namespace' }).getAttribute('aria-disabled')).toBe(
+      'true'
+    );
+    expect(screen.getByText(message)).toBeTruthy();
+    expect(screen.queryByRole('textbox', { name: 'Namespace' })).toBeNull();
+    fireEvent.change(screen.getByLabelText('ResourcePermit name prefix', { exact: false }), {
+      target: { value: 'incident' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Template Parameters' }));
+    expect(screen.queryByRole('button', { name: 'Create ResourcePermit' })).toBeNull();
+    expect(mocks.post).not.toHaveBeenCalled();
+  });
+
+  it('preserves request fields and visible selections when the namespace list updates', () => {
+    const form = () => (
+      <ResourcePermitSetupForm
+        cluster="main"
+        namespaces={[]}
+        templateKind="GlobalResourcePermitTemplate"
+        templateName="grafana"
+      />
+    );
+    const { rerender } = render(form());
+    fireEvent.change(screen.getByLabelText('ResourcePermit name prefix', { exact: false }), {
+      target: { value: 'incident' },
+    });
+    mocks.namespaceList.mockReturnValue([visibleNamespaces(['solar-dev', 'solar-test']), null]);
+    rerender(form());
+    expect(screen.getByRole('combobox', { name: 'Namespace' }).textContent).toBe('solar-test');
+    expect(
+      (screen.getByLabelText('ResourcePermit name prefix', { exact: false }) as HTMLInputElement)
+        .value
+    ).toBe('incident');
+    mocks.namespaceList.mockReturnValue([visibleNamespaces(['solar-dev']), null]);
+    rerender(form());
+    expect(screen.getByRole('combobox', { name: 'Namespace' }).textContent).toBe('solar-dev');
+  });
+
+  it('keeps readable global templates selectable without matching reported availability', () => {
+    mocks.globalTemplateList.mockReturnValue([
+      [
+        { getName: () => 'grafana', status: { namespaces: ['unseen-namespace'] } },
+        { getName: () => 'clusterrole-bindings', status: { namespaces: ['*'] } },
+      ],
+      null,
+    ]);
+    render(<CreateResourcePermit cluster="main" namespaces={['solar-test']} />);
+    expect(screen.getByRole('button', { name: 'Select template grafana' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Select template clusterrole-bindings' })
+    ).toBeTruthy();
+  });
 
   async function submitGeneratedRequest() {
     render(

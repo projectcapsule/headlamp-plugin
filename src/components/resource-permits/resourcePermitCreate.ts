@@ -114,10 +114,3 @@ export function buildCreateResourcePermit(input: CreateResourcePermitInput) {
     )}/resourcepermits`,
   };
 }
-
-export function templateAvailableInNamespaces(template: any, namespaces: string[]): boolean {
-  if (namespaces.length === 0) return true;
-  const reported: string[] =
-    template?.status?.namespaces || template?.jsonData?.status?.namespaces || [];
-  return reported.includes('*') || namespaces.some(namespace => reported.includes(namespace));
-}

@@ -710,7 +710,8 @@ links configured` filler. An empty selection means **No Tenant Filter** and
 - The ResourcePermit list has a prominent **New ResourcePermit** button that opens
   `CreateResourcePermitActivity.tsx` on the right. Creation combines namespaced
   `ResourcePermitTemplate` objects from the selected Namespace scope with
-  `GlobalResourcePermitTemplate` objects reported as available there. Either API
+  readable `GlobalResourcePermitTemplate` objects. Do not filter the global
+  creation catalog using controller-reported Namespace availability. Either API
   may be forbidden without hiding templates returned by the other. The catalog
   has an AND-style multi-tag Autocomplete plus
   free-text search across template name, description, and tags; it must not
@@ -739,6 +740,15 @@ links configured` filler. An empty selection means **No Tenant Filter** and
   ResourcePermit API payload without `spec.requestor`; admission must inject the
   authenticated identity. Template list/get access remains an explicit
   prerequisite and gets its own diagnostic when denied.
+  The Setup Namespace selector always uses the signed-in identity's live
+  Kubernetes Namespace list in the activity's cluster. Show every returned
+  Namespace regardless of the global Tenant/Namespace filter, template kind,
+  `status.namespaces`, or template selectors. Never offer a free-text Namespace
+  fallback or names supplied only by template status. Loading, denied, and empty
+  lists keep the selector disabled with an actionable message. Capsule admission
+  remains responsible for validating template availability and request creation.
+  Namespace watch updates preserve the entered request fields and retain a
+  selection while that Namespace remains visible.
 - `resourcePermitJsonSchema.ts` recursively discovers `x-capsule-form` at the
   schema root and under JSON Schema 2020-12 containment, composition,
   conditional, map, and local `$defs`/`definitions` reference paths. Local
@@ -1741,3 +1751,18 @@ future agents. Update them whenever the environment changes.
   RoleBinding responses. No cluster objects or permissions were changed.
   Playground reload/status confirmed Headlamp Ready and matching local/pod
   SHA-256 `d74ad7585e3160f18d6ef70e4f0624ad93a47a5784324217faa3dc3acc26d28e`.
+- On 2026-10-09, the ResourcePermit creation wizard switched its request
+  Namespace selector to the signed-in identity's Namespace list. Global
+  creation templates no longer depend on `status.namespaces` for catalog
+  visibility. Formatting, lint, TypeScript, all 291 tests across 62 files, and
+  the production build passed. The Flux playground runs Headlamp chart 0.45.0;
+  reload/status confirmed a Ready pod and matching local, injected, and
+  browser-served SHA-256
+  `89d64084f2c413b8cc21ef987608ab5f4a674e60c6a1fccafc76d541e29b2dcb`.
+  Alice's real Namespace list was empty, and both template selectors correctly
+  remained disabled. Browser-local permit and populated Namespace fixtures
+  verified identical visible choices for Grafana and ClusterRole bindings,
+  including a nonmatching active Namespace filter and template status. No
+  browser errors or permit mutations occurred. This recreated cluster lacks
+  all three ResourcePermit CRDs, so real request creation remains unavailable.
+  The Headlamp HelmRelease remains suspended for the development injection.

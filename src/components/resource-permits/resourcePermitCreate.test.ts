@@ -4,7 +4,6 @@ import {
   filterResourcePermitTemplates,
   groupResourcePermitTemplates,
   resourcePermitTemplateCategory,
-  templateAvailableInNamespaces,
   UNCATEGORIZED_TEMPLATE_CATEGORY,
 } from './resourcePermitCreate';
 
@@ -72,15 +71,6 @@ describe('ResourcePermit creation', () => {
     });
 
     expect(request?.body.spec.params).toEqual(['view', 'edit']);
-  });
-
-  it('filters templates against their controller-reported Namespace availability', () => {
-    expect(templateAvailableInNamespaces({ status: { namespaces: ['*'] } }, ['solar-test'])).toBe(
-      true
-    );
-    expect(
-      templateAvailableInNamespaces({ status: { namespaces: ['solar-prod'] } }, ['solar-test'])
-    ).toBe(false);
   });
 
   it('searches templates and applies every selected tag', () => {

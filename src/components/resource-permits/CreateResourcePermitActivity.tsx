@@ -1,5 +1,5 @@
 import { Icon } from '@iconify/react';
-import { Activity, ApiProxy, Router } from '@kinvolk/headlamp-plugin/lib';
+import { Activity, ApiProxy, K8s, Router } from '@kinvolk/headlamp-plugin/lib';
 import {
   Alert,
   Autocomplete,
@@ -43,9 +43,8 @@ import {
   buildCreateResourcePermit,
   filterResourcePermitTemplates,
   groupResourcePermitTemplates,
-  templateAvailableInNamespaces,
 } from './resourcePermitCreate';
-import { templateApprovalMode, templateNamespaces } from './resourcePermitHelpers';
+import { templateApprovalMode } from './resourcePermitHelpers';
 import {
   buildResourcePermitUiSchema,
   resourcePermitDefaultParamData,
@@ -127,6 +126,7 @@ export function ResourcePermitSetupForm({
     templateKind === 'ResourcePermitTemplate' ? templateNamespace : undefined,
     { cluster }
   );
+  const [visibleNamespaces, namespaceError] = K8s.ResourceClasses.Namespace.useList({ cluster });
   const [name, setName] = useState('');
   const [generateName, setGenerateName] = useState(true);
   const [namespace, setNamespace] = useState('');
@@ -151,17 +151,11 @@ export function ResourcePermitSetupForm({
   );
   const uiSchema = useMemo(() => buildResourcePermitUiSchema(paramSchema), [paramSchema]);
   const initialValues = useMemo(() => resourcePermitDefaultParamData(paramSchema), [paramSchema]);
-  const reportedNamespaces =
-    templateKind === 'ResourcePermitTemplate'
-      ? ([templateNamespace].filter(Boolean) as string[])
-      : templateNamespaces(template);
-  const namespaceOptions = useMemo(() => {
-    if (reportedNamespaces.includes('*')) return [...new Set(namespaces)].sort();
-    const candidates = namespaces.length
-      ? reportedNamespaces.filter(candidate => namespaces.includes(candidate))
-      : reportedNamespaces;
-    return [...new Set(candidates)].sort();
-  }, [namespaces, reportedNamespaces.join('|')]);
+  const namespaceOptions = useMemo(
+    () =>
+      [...new Set((visibleNamespaces || []).map(item => item.getName()).filter(Boolean))].sort(),
+    [visibleNamespaces]
+  );
 
   useEffect(() => {
     setValues(initialValues);
@@ -170,13 +164,22 @@ export function ResourcePermitSetupForm({
     setReason('');
     setDuration('');
     setStartTime('');
-    setNamespace(namespaceOptions.length === 1 ? namespaceOptions[0] : '');
     setErrors({});
     setFormError('');
     setCreated(null);
     setYamlResource(null);
     setActiveStep(0);
-  }, [initialValues, namespaceOptions.join('|')]);
+  }, [initialValues]);
+
+  useEffect(() => {
+    setNamespace(current =>
+      namespaceOptions.includes(current)
+        ? current
+        : namespaceOptions.length === 1
+        ? namespaceOptions[0]
+        : ''
+    );
+  }, [namespaceOptions]);
 
   if (templateError) {
     return (
@@ -199,7 +202,9 @@ export function ResourcePermitSetupForm({
         ? 'Keep the prefix at or below 240 characters'
         : 'Maximum length is 253 characters';
     }
-    if (!namespace.trim()) nextErrors.namespace = 'Required';
+    if (!namespaceOptions.includes(namespace) || namespaceError) {
+      nextErrors.namespace = 'Choose a visible Namespace';
+    }
     if (startTime && Number.isNaN(new Date(startTime).getTime())) {
       nextErrors.startTime = 'Enter a valid start time';
     }
@@ -376,37 +381,31 @@ export function ResourcePermitSetupForm({
                 <Typography fontWeight={700} variant="subtitle1">
                   Formal request information
                 </Typography>
-                {namespaceOptions.length > 0 ? (
-                  <TextField
-                    error={Boolean(errors.namespace)}
-                    fullWidth
-                    helperText={errors.namespace}
-                    label="Namespace"
-                    onChange={event => setNamespace(event.target.value)}
-                    required
-                    select
-                    value={namespace}
-                  >
-                    {namespaceOptions.map(option => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                ) : (
-                  <TextField
-                    error={Boolean(errors.namespace)}
-                    fullWidth
-                    helperText={
-                      errors.namespace ||
-                      'Enter a Namespace where the selected template is available and you can create requests.'
-                    }
-                    label="Namespace"
-                    onChange={event => setNamespace(event.target.value)}
-                    required
-                    value={namespace}
-                  />
-                )}
+                <TextField
+                  disabled={Boolean(namespaceError) || namespaceOptions.length === 0}
+                  error={Boolean(errors.namespace || namespaceError)}
+                  fullWidth
+                  helperText={
+                    namespaceError
+                      ? 'Visible Namespaces could not be loaded. Check Namespace list access.'
+                      : !visibleNamespaces
+                      ? 'Loading visible Namespaces…'
+                      : namespaceOptions.length === 0
+                      ? 'No Namespaces are visible to this account.'
+                      : errors.namespace
+                  }
+                  label="Namespace"
+                  onChange={event => setNamespace(event.target.value)}
+                  required
+                  select
+                  value={namespaceOptions.includes(namespace) ? namespace : ''}
+                >
+                  {namespaceOptions.map(option => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
                 <Box
                   sx={theme => ({
                     bgcolor: alpha(theme.palette.primary.main, 0.05),
@@ -624,14 +623,12 @@ export function CreateResourcePermit({
             namespace: template.getNamespace(),
             template,
           })),
-        ...(globalTemplates || [])
-          .filter(template => templateAvailableInNamespaces(template, namespaces))
-          .map(template => ({
-            key: templateCatalogKey('GlobalResourcePermitTemplate', undefined, template.getName()),
-            kind: 'GlobalResourcePermitTemplate' as const,
-            namespace: undefined,
-            template,
-          })),
+        ...(globalTemplates || []).map(template => ({
+          key: templateCatalogKey('GlobalResourcePermitTemplate', undefined, template.getName()),
+          kind: 'GlobalResourcePermitTemplate' as const,
+          namespace: undefined,
+          template,
+        })),
       ].sort(
         (left, right) =>
           left.template.getName().localeCompare(right.template.getName()) ||
@@ -693,7 +690,7 @@ export function CreateResourcePermit({
             <CircularProgress size={20} />
           ) : availableTemplates.length === 0 ? (
             <Alert severity="info">
-              No visible template is reported as available in the selected Namespace scope.
+              No readable request templates were found in the selected Namespace scope.
             </Alert>
           ) : (
             <Stack gap={2.5}>
