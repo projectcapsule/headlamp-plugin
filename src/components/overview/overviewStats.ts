@@ -19,58 +19,6 @@ export interface ResourcePoolStats extends ReadinessStats {
   exhausted: number;
 }
 
-export interface ResourcePermitCatalogStats {
-  active: number;
-  approved: number;
-  created: number;
-  denied: number;
-  expired: number;
-  failed: number;
-  pending: number;
-  requested: number;
-  retrying: number;
-  reviewable: number;
-  total: number;
-}
-
-function objectData(item: any) {
-  return item?.jsonData || item || {};
-}
-
-export function countResourcePermitCatalog(
-  items: any[] | null | undefined
-): ResourcePermitCatalogStats {
-  const stats: ResourcePermitCatalogStats = {
-    active: 0,
-    approved: 0,
-    created: 0,
-    denied: 0,
-    expired: 0,
-    failed: 0,
-    pending: 0,
-    requested: 0,
-    retrying: 0,
-    reviewable: 0,
-    total: (items || []).length,
-  };
-
-  for (const item of items || []) {
-    const data = objectData(item);
-    const phase = String(
-      data.status?.phase || ''
-    ).toLowerCase() as keyof ResourcePermitCatalogStats;
-    if (phase in stats && phase !== 'total' && phase !== 'reviewable') stats[phase] += 1;
-
-    const ready = (data.status?.conditions || []).some(
-      (condition: any) =>
-        condition?.type === 'Ready' && String(condition.status).toLowerCase() === 'true'
-    );
-    if ((phase === 'requested' || phase === 'pending') && ready) stats.reviewable += 1;
-  }
-
-  return stats;
-}
-
 export function countReadiness(items: any[] | null | undefined): ReadinessStats {
   const list = items || [];
   const ready = list.filter(item => isResourceReady(item)).length;

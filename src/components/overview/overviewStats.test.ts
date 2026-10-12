@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  countQuotaHealth,
-  countReadiness,
-  countResourcePermitCatalog,
-  countResourcePools,
-} from './overviewStats';
+import { countQuotaHealth, countReadiness, countResourcePools } from './overviewStats';
 
 const withConditions = (conditions: Array<{ type: string; status: string }>) => ({
   status: { conditions },
@@ -53,43 +48,5 @@ describe('overview stats', () => {
         },
       ])
     ).toEqual({ ready: 1, notReady: 1, total: 2, claims: 3, exhausted: 1 });
-  });
-
-  it('summarizes ResourcePermit lifecycle and review workload', () => {
-    expect(
-      countResourcePermitCatalog([
-        { status: { phase: 'Created' } },
-        {
-          status: {
-            phase: 'Requested',
-            conditions: [{ type: 'Ready', status: 'True' }],
-          },
-        },
-        {
-          jsonData: {
-            status: {
-              phase: 'Pending',
-              conditions: [{ type: 'Ready', status: 'False' }],
-            },
-          },
-        },
-        { status: { phase: 'Active' } },
-        { status: { phase: 'Failed' } },
-        { status: { phase: 'Retrying' } },
-        { status: { phase: 'Expired' } },
-      ])
-    ).toEqual({
-      active: 1,
-      approved: 0,
-      created: 1,
-      denied: 0,
-      expired: 1,
-      failed: 1,
-      pending: 1,
-      requested: 1,
-      retrying: 1,
-      reviewable: 1,
-      total: 7,
-    });
   });
 });
