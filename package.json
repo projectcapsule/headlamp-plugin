@@ -13,7 +13,7 @@
   "author": "Project Capsule Authors",
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=22 <25",
+    "node": ">=22 <27",
     "npm": ">=11"
   },
   "scripts": {
