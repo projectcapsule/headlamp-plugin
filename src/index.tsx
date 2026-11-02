@@ -33,7 +33,10 @@ import { CapsuleConfigurationDetail } from './components/configuration/CapsuleCo
 import { CapsuleConfigurationList } from './components/configuration/CapsuleConfigurationList';
 import { CapsuleMap } from './components/map/CapsuleMap';
 import { processNamespaceDetailsSections } from './components/namespaces/NamespaceDetailsIntegration';
-import { CapsuleOverview } from './components/overview/CapsuleOverview';
+import {
+  CAPSULE_OVERVIEW_ID,
+  registerCapsuleOverview,
+} from './components/overview/registerOverview';
 import { GlobalProxySettingsDetail } from './components/proxy/GlobalProxySettingsDetail';
 import { GlobalProxySettingsList } from './components/proxy/GlobalProxySettingsList';
 import CreateCustomQuotaForm from './components/quotas/CreateCustomQuotaForm';
@@ -184,13 +187,7 @@ registerSidebarEntry({
   url: '/capsule/overview/',
 });
 
-registerSidebarEntry({
-  parent: 'capsule',
-  name: 'overview',
-  label: 'Overview',
-  icon: 'mdi:view-dashboard',
-  url: '/capsule/overview/',
-});
+registerCapsuleOverview();
 
 registerSidebarEntry({
   parent: 'capsule',
@@ -313,14 +310,6 @@ registerSidebarEntry({
 });
 
 registerRoute({
-  path: '/capsule/overview/',
-  sidebar: 'overview',
-  name: 'capsule-overview',
-  component: () => <CapsuleOverview />,
-  exact: true,
-});
-
-registerRoute({
   path: '/capsule/subjects/:kind/:subject',
   sidebar: 'tenants',
   name: 'capsule-subject',
@@ -330,7 +319,7 @@ registerRoute({
 
 registerRoute({
   path: '/capsule/tags/:tag',
-  sidebar: 'overview',
+  sidebar: CAPSULE_OVERVIEW_ID,
   name: 'capsule-tag',
   component: () => <CapsuleTagSummary />,
   exact: true,

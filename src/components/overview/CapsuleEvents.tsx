@@ -1,26 +1,11 @@
-import { Link, ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { ResourceListView } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { DateLabel } from '@kinvolk/headlamp-plugin/lib/components/common';
-import Event from '@kinvolk/headlamp-plugin/lib/k8s/event';
 import { Chip, Typography } from '@mui/material';
 import { useMemo } from 'react';
+import { CAPSULE_CRDS } from '../../resources/capsuleCustomResources';
+import { CapsuleResourceLink } from '../common/CapsuleResourceLink';
 import { anchoredResourceListHeaderProps } from '../common/SectionAnchor';
 import { capsuleEventTimestamp, isCapsuleResourceEvent } from './capsuleEventHelpers';
-
-const resourceRoutes: Record<string, { routeName: string; namespaced: boolean }> = {
-  Tenant: { routeName: 'tenant', namespaced: false },
-  CustomQuota: { routeName: 'customquota', namespaced: true },
-  GlobalCustomQuota: { routeName: 'globalcustomquota', namespaced: false },
-  TenantResource: { routeName: 'tenantresource', namespaced: true },
-  GlobalTenantResource: { routeName: 'globaltenantresource', namespaced: false },
-};
-
-const capsuleResourcePlurals: Record<string, string> = {
-  CapsuleConfiguration: 'capsuleconfigurations',
-  GlobalProxySettings: 'globalproxysettings',
-  GlobalResourceQuota: 'globalresourcequotas',
-  ResourcePool: 'resourcepools',
-  TenantOwner: 'tenantowners',
-};
 
 function involvedObject(event: any) {
   return event?.involvedObject || event?.jsonData?.involvedObject || {};
@@ -28,44 +13,23 @@ function involvedObject(event: any) {
 
 function eventResourceLink(event: any) {
   const object = involvedObject(event);
-  const route = resourceRoutes[object.kind];
   const label = `${object.kind || 'Resource'}/${object.name || 'Unknown'}`;
-
-  if (route) {
-    return (
-      <Link
-        routeName={route.routeName}
-        params={{
-          name: object.name,
-          ...(route.namespaced ? { namespace: object.namespace } : {}),
-        }}
-      >
-        {label}
-      </Link>
-    );
-  }
-
-  const plural = capsuleResourcePlurals[object.kind];
-  if (plural) {
-    return (
-      <Link
-        routeName="customresource"
-        params={{
-          crName: object.name,
-          crd: `${plural}.capsule.clastix.io`,
-          namespace: object.namespace || '-',
-        }}
-      >
-        {label}
-      </Link>
-    );
-  }
-
-  return label;
+  const crd = CAPSULE_CRDS[object.kind as keyof typeof CAPSULE_CRDS];
+  return crd && object.name ? (
+    <CapsuleResourceLink
+      crd={crd}
+      name={object.name}
+      namespace={object.namespace}
+      cluster={event.cluster}
+    >
+      {label}
+    </CapsuleResourceLink>
+  ) : (
+    label
+  );
 }
 
-export function CapsuleEvents() {
-  const [events, error] = Event.useList({ limit: 500 });
+export function CapsuleEvents({ events, error }: { events: any[]; error?: { message: string } }) {
   const capsuleEvents = useMemo(() => (events || []).filter(isCapsuleResourceEvent), [events]);
 
   return (

@@ -17,6 +17,18 @@ describe('Capsule overview events', () => {
   it('uses the newest available event timestamp representation', () => {
     expect(
       capsuleEventTimestamp({
+        lastTimestamp: '2026-10-24T00:00:00Z',
+        metadata: { creationTimestamp: '2026-10-23T00:00:00Z' },
+      })
+    ).toBe('2026-10-24T00:00:00Z');
+    expect(
+      capsuleEventTimestamp({
+        series: { lastObservedTime: '2026-10-24T01:00:00Z' },
+        lastTimestamp: '2026-10-24T00:00:00Z',
+      })
+    ).toBe('2026-10-24T01:00:00Z');
+    expect(
+      capsuleEventTimestamp({
         lastOccurrence: '2026-08-13T10:00:00Z',
         jsonData: { lastTimestamp: '2026-08-13T09:00:00Z' },
       })

@@ -73,6 +73,17 @@ overridden.
 
 ### Existing Flux playground Headlamp
 
+- Current Headlamp 0.46 installations with `-watch-plugins-changes` support
+  `HEADLAMP_CONTEXT=admin@cluster-a npm run dev:cluster -- --once`. The new
+  `hack/headlamp-inject.mjs` builds using the repository Vite configuration,
+  injects into every ready replica, and SHA-256-verifies temporary files before
+  publishing package metadata, license and bundle under `/build/plugins/capsule`.
+  Omit `--once` to watch source and replacement pods. The context is explicit;
+  namespace/deployment/container/plugin-directory overrides match the Flux loop.
+  Verify both per-pod files and HTTP-served bundles after injection. This loop
+  is ephemeral across pod replacement. The older reload workflow below remains
+  available for deployments which need a server restart to refresh plugins.
+
 - `make headlamp-playground-reload` is the fast path for a Headlamp already
   installed by the Capsule playground. It dynamically reads
   `flux-system/headlamp.spec.targetNamespace`, finds the Deployment through its
@@ -145,12 +156,28 @@ replace it with API- and verb-scoped roles there.
 
 ## Overview dashboard
 
-- `src/components/overview/CapsuleOverview.tsx` renders four semantic summary
-  rows: Tenant (3 cards), Quotas (4 cards), Replications (3 cards), and a Proxy row (1 card).
-- The twelve dedicated panels are Tenants, Managed Namespaces, Tenant Owners,
-  Resource Pools, Custom Quotas, Global Custom Quotas, Global Resource Quotas,
-  Tenant Resources, Global Tenant Resources, Managed Resources, and Global
-  Proxy Settings.
+- `src/components/overview/CapsuleOverview.tsx` follows the Flux operations
+  dashboard: health/refresh header, controller replica cards, four aligned
+  summary cards, Needs attention, Tenant namespace readiness, Quota capacity,
+  Installation, grouped Resources and Capsule Events.
+- `overviewRegistry.ts` declares all eleven Capsule resource APIs, including
+  ResourcePoolClaim, optional GlobalProxySettings and CapsuleConfiguration.
+  `overviewClient.ts` and `useCapsuleOverview.ts` use finite paginated GETs with
+  concurrency six, 15-second collection deadlines and a 20-second refresh
+  deadline. Completed lists appear incrementally; API absence, forbidden reads
+  and timeouts settle explicitly. Refresh repeats 30 seconds after completion,
+  preserves old results during refresh and cancels on scope changes.
+- `dashboardModel.ts` keeps Unknown, stale generations, cordoned resources and
+  current readiness separate. Quota pressure is the maximum per-resource ratio,
+  never a sum of CPU and memory. Replicated inventory is deduplicated from
+  Capsule status and is labeled controller-reported rather than live health;
+  keep per-object inspection on detail pages. Namespace and allowed-namespace
+  scopes apply to namespaced reads and status-derived inventory; controller
+  discovery uses allowed namespaces independently of the application filter.
+- `registerOverview.tsx` owns the globally unique `capsule-overview` sidebar
+  and route ID. Never restore the generic `overview` sidebar ID: Headlamp keys
+  plugin entries globally and it collides with Flux. The URL stays
+  `/capsule/overview/`.
 - `src/components/overview/overviewStats.ts` contains the tested readiness,
   quota-health, and ResourcePool aggregation logic.
 - `src/resources/resourcePools.ts` models both cluster-scoped ResourcePools and
@@ -184,9 +211,10 @@ replace it with API- and verb-scoped roles there.
 - Managed-resource `Unknown` status is a separate gray segment and must not be
   counted as Ready.
 - Overview `StatCard`s are fully keyboard-accessible, cluster-aware links when
-  `routeName` is provided. All twelve overview cards navigate to their dedicated
-  plugin page, the Kubernetes Namespaces page, an appropriate generic custom
-  resource list, or the all-sources tenant-grouped map for Managed Resources.
+  `routeName` is provided. Summary cards and grouped resource shortcuts navigate
+  to dedicated CR lists, Kubernetes Namespaces or the all-sources tenant-grouped
+  map. Individual objects use canonical full-page Capsule links and retain the
+  source cluster.
 - The overview no longer renders the duplicate recent-Tenants table or its
   `View all tenants` footer link. `CapsuleEvents.tsx` is the final overview
   section and lists Events for every involved object in the
