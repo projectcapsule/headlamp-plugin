@@ -9,6 +9,7 @@ export interface CapsuleResourceLinkProps {
   crd: string;
   name: string;
   namespace?: string;
+  cluster?: string;
 }
 
 /**
@@ -18,11 +19,17 @@ export interface CapsuleResourceLinkProps {
  * when drawer mode is enabled. These resources have full rich pages, so bypass
  * that interception while retaining Headlamp's cluster-aware canonical URL.
  */
-export function CapsuleResourceLink({ children, crd, name, namespace }: CapsuleResourceLinkProps) {
-  const to = Router.createRouteURL(
-    'customresource',
-    capsuleCustomResourceRouteParams(crd, name, namespace)
-  );
+export function CapsuleResourceLink({
+  children,
+  crd,
+  name,
+  namespace,
+  cluster,
+}: CapsuleResourceLinkProps) {
+  const to = Router.createRouteURL('customresource', {
+    ...capsuleCustomResourceRouteParams(crd, name, namespace),
+    ...(cluster ? { cluster } : {}),
+  });
 
   return (
     <MuiLink component={RouterLink} to={to} sx={{ cursor: 'pointer' }}>

@@ -1,6 +1,6 @@
 {
   "name": "capsule",
-  "version": "0.1.0-beta1",
+  "version": "0.1.0-beta2",
   "description": "Capsule multi-tenancy plugin for Headlamp. Tenant switcher, scoped namespace filtering by tenant, per-tenant namespace overview, visualization for CustomQuotas / GlobalCustomQuotas, and TenantResources / GlobalTenantResources (with SSA managed fields maps per resource).",
   "homepage": "https://projectcapsule.dev",
   "repository": {
@@ -18,6 +18,7 @@
   },
   "scripts": {
     "start": "headlamp-plugin start",
+    "dev:cluster": "node hack/headlamp-inject.mjs",
     "build": "vite build --config vite.config.mjs",
     "format": "headlamp-plugin format",
     "lint": "headlamp-plugin lint",

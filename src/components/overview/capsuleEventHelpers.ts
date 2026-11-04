@@ -7,12 +7,13 @@ export function isCapsuleResourceEvent(event: any): boolean {
 }
 
 export function capsuleEventTimestamp(event: any): string {
+  const data = event?.jsonData || event || {};
   return (
     event?.lastOccurrence ||
-    event?.jsonData?.series?.lastObservedTime ||
-    event?.jsonData?.lastTimestamp ||
-    event?.jsonData?.eventTime ||
-    event?.metadata?.creationTimestamp ||
+    data.series?.lastObservedTime ||
+    data.lastTimestamp ||
+    data.eventTime ||
+    data.metadata?.creationTimestamp ||
     ''
   );
 }

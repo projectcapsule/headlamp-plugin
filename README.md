@@ -13,10 +13,15 @@ The plugin brings first-class multi-tenancy awareness to the Headlamp UI, includ
 
 - **Tenant Switcher** — Multi-select tenant chooser in the app bar that scopes the entire UI to the selected tenants' namespaces.
 - **Tenant Views** — Full list and detail pages for Tenants, including owners, state, namespace lists, and rich metadata (icon, description, links, banner) via annotations.
-- **Capsule Overview** — Responsive Tenant, Quotas, and Replications rows for
-  Tenants, managed namespaces, TenantOwners, ResourcePools, CustomQuotas,
-  GlobalCustomQuotas, GlobalResourceQuotas, TenantResources,
-  GlobalTenantResources, and replicated objects.
+- **Capsule Overview** — Flux-style health header, controller replica cards,
+  four aligned summary cards, actionable attention items, Tenant namespace
+  readiness, quota capacity, installation context, grouped resource shortcuts
+  and Capsule Events. Requests settle independently with bounded deadlines,
+  manual refresh and automatic refresh 30 seconds after completion. Optional
+  APIs and permission failures remain explicit. Managed-object counts use
+  controller-reported inventory rather than fetching every replicated object.
+  The overview route and sidebar use the globally unique `capsule-overview` ID,
+  so Flux and Capsule navigation can coexist.
 - **Custom Quotas** — Dedicated list and detail views for both `CustomQuota` and `GlobalCustomQuota`, with usage pies, claims breakdown, and source definitions.
 - **Global Resource Quotas** — Dedicated cluster-wide quota list with per-resource capacity health, plus aggregate and per-namespace consumption details in an animated relationship graph.
 - **Native CRD Integration** — Opening supported Capsule objects from Headlamp's Custom Resources navigation uses the same rich plugin overviews and details, with canonical CR instance URLs rather than parallel pages.
@@ -59,6 +64,20 @@ pluginsManager:
 ### Development environment
 
 See the [Development](#development) section below for the in-cluster workflow.
+
+For the existing Headlamp deployment with plugin watching enabled, build and
+overwrite Capsule in every ready replica with:
+
+```sh
+HEADLAMP_CONTEXT=admin@cluster-a npm run dev:cluster -- --once
+```
+
+The context is mandatory. Override `HEADLAMP_NAMESPACE`, `HEADLAMP_DEPLOYMENT`,
+`HEADLAMP_CONTAINER` or `HEADLAMP_PLUGINS_DIR` as needed. The script uses this
+repository's Vite configuration, verifies each copied file before publishing it,
+and targets `/build/plugins/capsule`. Without `--once` it watches and resyncs
+changed source and replacement pods. Injection is ephemeral across pod rollouts;
+package the plugin in an image for a persistent deployment.
 
 ### Documentation URL
 
